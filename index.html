@@ -33,7 +33,7 @@
 <body class="min-h-[100dvh] w-full flex flex-col justify-between text-gray-800 selection:bg-orange-200">
 
     <!-- CABEÇALHO -->
-    <header class="w-full max-w-5xl mx-auto px-4 pt-6 pb-4 flex flex-col sm:flex-row justify-between items-center gap-4">
+    <header class="w-full max-w-6xl mx-auto px-4 pt-6 pb-4 flex flex-col sm:flex-row justify-between items-center gap-4">
         <div class="flex items-center gap-3">
             <div class="w-12 h-12 bg-orange-500 rounded-2xl flex items-center justify-center text-white text-2xl shadow-md shadow-orange-200" aria-hidden="true">
                 🚀
@@ -52,31 +52,27 @@
     </header>
 
     <!-- CONTEÚDO PRINCIPAL (SELEÇÃO DE MÓDULOS) -->
-    <main class="flex-grow w-full max-w-5xl mx-auto px-4 py-6 flex flex-col justify-center">
-        <div class="text-center mb-8">
-            <h2 class="text-2xl sm:text-3xl font-extrabold text-gray-800 mb-2">Escolha uma atividade para praticar</h2>
+    <main class="flex-grow w-full max-w-6xl mx-auto px-4 py-4 flex flex-col justify-center">
+        <div class="text-center mb-6">
+            <h2 class="text-2xl sm:text-3xl font-extrabold text-gray-800 mb-1">Escolha uma atividade para praticar</h2>
             <p class="text-gray-500 font-medium text-sm sm:text-base">Selecione um dos módulos abaixo para iniciar os exercícios.</p>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
             
-            <!-- MÓDULO 1: FORMAÇÃO DE SÍLABAS -->
-            <div class="group bg-white rounded-[2rem] p-6 border-4 border-orange-200 hover:border-orange-400 shadow-xl shadow-orange-100/50 transition-all hover:-translate-y-1.5 flex flex-col items-center text-center relative overflow-hidden">
-                <div class="absolute top-4 right-4 bg-green-100 text-green-700 text-xs font-extrabold px-3 py-1 rounded-full">
-                    Disponível
-                </div>
-                <div class="w-24 h-24 bg-orange-100 rounded-3xl flex items-center justify-center text-5xl mb-4 group-hover:scale-110 transition-transform animate-float" aria-hidden="true">
+            <!-- MÓDULO 1: MONTAR PALAVRAS -->
+            <div class="group bg-white rounded-[2rem] p-5 border-4 border-orange-200 hover:border-orange-400 shadow-xl shadow-orange-100/50 transition-all hover:-translate-y-1.5 flex flex-col items-center text-center relative overflow-hidden">
+                <div class="w-20 h-20 bg-orange-100 rounded-3xl flex items-center justify-center text-4xl mb-3 group-hover:scale-110 transition-transform animate-float" aria-hidden="true">
                     🧩
                 </div>
-                <h3 class="text-xl font-extrabold text-gray-800 mb-2">Montar Palavras</h3>
-                <p class="text-gray-500 text-sm font-medium mb-4 flex-grow">
+                <h3 class="text-lg font-extrabold text-gray-800 mb-1.5">Montar Palavras</h3>
+                <p class="text-gray-500 text-xs font-medium mb-4 flex-grow">
                     Organize as sílabas embaralhadas para formar o nome correspondente à figura exibida.
                 </p>
 
-                <!-- Seletor de Meta -->
-                <div class="w-full mb-4">
-                    <label for="silabas-target-select" class="block text-[11px] font-extrabold text-gray-400 mb-1 uppercase tracking-wider">Meta de Acertos (Foguete)</label>
-                    <select id="silabas-target-select" onchange="savePlayerProfile()" class="w-full bg-orange-50/60 border-2 border-orange-200 rounded-xl px-3 py-2 text-sm font-extrabold text-center text-orange-700 focus:border-orange-400 outline-none transition-all cursor-pointer">
+                <div class="w-full mb-3">
+                    <label for="silabas-target-select" class="block text-[10px] font-extrabold text-gray-400 mb-1 uppercase tracking-wider">Meta (Foguete)</label>
+                    <select id="silabas-target-select" onchange="savePlayerProfile()" class="w-full bg-orange-50/60 border-2 border-orange-200 rounded-xl px-2 py-1.5 text-xs font-extrabold text-center text-orange-700 focus:border-orange-400 outline-none transition-all cursor-pointer">
                         <option value="5">5 Acertos</option>
                         <option value="10">10 Acertos</option>
                         <option value="15">15 Acertos</option>
@@ -84,28 +80,24 @@
                     </select>
                 </div>
 
-                <a href="silabas.html" onclick="validateNavigation(event, 'silabas.html')" class="w-full bg-orange-500 hover:bg-orange-600 text-white font-extrabold py-3 rounded-xl shadow-md shadow-orange-200 transition-colors flex items-center justify-center gap-2">
-                    Praticar <i data-lucide="arrow-right" class="w-5 h-5"></i>
+                <a href="silabas.html" onclick="validateNavigation(event, 'silabas.html')" class="w-full bg-orange-500 hover:bg-orange-600 text-white font-extrabold py-2.5 rounded-xl shadow-md shadow-orange-200 transition-colors flex items-center justify-center gap-1.5 text-sm">
+                    Praticar <i data-lucide="arrow-right" class="w-4 h-4"></i>
                 </a>
             </div>
 
-            <!-- MÓDULO 2: IDENTIFICAÇÃO DE LETRA INICIAL -->
-            <div class="group bg-white rounded-[2rem] p-6 border-4 border-indigo-200 hover:border-indigo-400 shadow-xl shadow-indigo-100/50 transition-all hover:-translate-y-1.5 flex flex-col items-center text-center relative overflow-hidden">
-                <div class="absolute top-4 right-4 bg-green-100 text-green-700 text-xs font-extrabold px-3 py-1 rounded-full">
-                    Disponível
-                </div>
-                <div class="w-24 h-24 bg-indigo-100 rounded-3xl flex items-center justify-center text-5xl mb-4 group-hover:scale-110 transition-transform animate-float" style="animation-delay: 0.5s;" aria-hidden="true">
+            <!-- MÓDULO 2: LETRA INICIAL -->
+            <div class="group bg-white rounded-[2rem] p-5 border-4 border-indigo-200 hover:border-indigo-400 shadow-xl shadow-indigo-100/50 transition-all hover:-translate-y-1.5 flex flex-col items-center text-center relative overflow-hidden">
+                <div class="w-20 h-20 bg-indigo-100 rounded-3xl flex items-center justify-center text-4xl mb-3 group-hover:scale-110 transition-transform animate-float" style="animation-delay: 0.3s;" aria-hidden="true">
                     🔤
                 </div>
-                <h3 class="text-xl font-extrabold text-gray-800 mb-2">Letra Inicial</h3>
-                <p class="text-gray-500 text-sm font-medium mb-4 flex-grow">
+                <h3 class="text-lg font-extrabold text-gray-800 mb-1.5">Letra Inicial</h3>
+                <p class="text-gray-500 text-xs font-medium mb-4 flex-grow">
                     Observe a ilustração apresentada e identifique qual letra inicia a escrita daquela palavra.
                 </p>
 
-                <!-- Seletor de Meta -->
-                <div class="w-full mb-4">
-                    <label for="letra-target-select" class="block text-[11px] font-extrabold text-gray-400 mb-1 uppercase tracking-wider">Meta de Acertos (Foguete)</label>
-                    <select id="letra-target-select" onchange="savePlayerProfile()" class="w-full bg-indigo-50/60 border-2 border-indigo-200 rounded-xl px-3 py-2 text-sm font-extrabold text-center text-indigo-700 focus:border-indigo-400 outline-none transition-all cursor-pointer">
+                <div class="w-full mb-3">
+                    <label for="letra-target-select" class="block text-[10px] font-extrabold text-gray-400 mb-1 uppercase tracking-wider">Meta (Foguete)</label>
+                    <select id="letra-target-select" onchange="savePlayerProfile()" class="w-full bg-indigo-50/60 border-2 border-indigo-200 rounded-xl px-2 py-1.5 text-xs font-extrabold text-center text-indigo-700 focus:border-indigo-400 outline-none transition-all cursor-pointer">
                         <option value="5">5 Acertos</option>
                         <option value="10" selected>10 Acertos</option>
                         <option value="15">15 Acertos</option>
@@ -113,33 +105,66 @@
                     </select>
                 </div>
 
-                <a href="letra-inicial.html" onclick="validateNavigation(event, 'letra-inicial.html')" class="w-full bg-indigo-500 hover:bg-indigo-600 text-white font-extrabold py-3 rounded-xl shadow-md shadow-indigo-200 transition-colors flex items-center justify-center gap-2">
-                    Praticar <i data-lucide="arrow-right" class="w-5 h-5"></i>
+                <a href="letra-inicial.html" onclick="validateNavigation(event, 'letra-inicial.html')" class="w-full bg-indigo-500 hover:bg-indigo-600 text-white font-extrabold py-2.5 rounded-xl shadow-md shadow-indigo-200 transition-colors flex items-center justify-center gap-1.5 text-sm">
+                    Praticar <i data-lucide="arrow-right" class="w-4 h-4"></i>
                 </a>
             </div>
 
-            <!-- MÓDULO 3: FORMAÇÃO DE FRASES -->
-            <a href="frases.html" onclick="validateNavigation(event, 'frases.html')" class="group bg-white rounded-[2rem] p-6 border-4 border-emerald-200 hover:border-emerald-400 shadow-xl shadow-emerald-100/50 transition-all hover:-translate-y-1.5 flex flex-col items-center text-center relative overflow-hidden">
-                <div class="absolute top-4 right-4 bg-emerald-100 text-emerald-700 text-xs font-extrabold px-3 py-1 rounded-full">
-                    Módulo 3
-                </div>
-                <div class="w-24 h-24 bg-emerald-100 rounded-3xl flex items-center justify-center text-5xl mb-5 group-hover:scale-110 transition-transform animate-float" style="animation-delay: 1s;" aria-hidden="true">
+            <!-- MÓDULO 3: FORMAR FRASES -->
+            <div class="group bg-white rounded-[2rem] p-5 border-4 border-emerald-200 hover:border-emerald-400 shadow-xl shadow-emerald-100/50 transition-all hover:-translate-y-1.5 flex flex-col items-center text-center relative overflow-hidden">
+                <div class="w-20 h-20 bg-emerald-100 rounded-3xl flex items-center justify-center text-4xl mb-3 group-hover:scale-110 transition-transform animate-float" style="animation-delay: 0.6s;" aria-hidden="true">
                     📝
                 </div>
-                <h3 class="text-xl font-extrabold text-gray-800 mb-2">Formar Frases</h3>
-                <p class="text-gray-500 text-sm font-medium mb-6 flex-grow">
+                <h3 class="text-lg font-extrabold text-gray-800 mb-1.5">Formar Frases</h3>
+                <p class="text-gray-500 text-xs font-medium mb-4 flex-grow">
                     Analise a cena ilustrada e ordene os blocos de palavras para construir uma frase com sentido.
                 </p>
-                <div class="w-full bg-emerald-500 group-hover:bg-emerald-600 text-white font-extrabold py-3 rounded-xl shadow-md shadow-emerald-200 transition-colors flex items-center justify-center gap-2">
-                    Praticar <i data-lucide="arrow-right" class="w-5 h-5"></i>
+
+                <div class="w-full mb-3">
+                    <label for="frases-target-select" class="block text-[10px] font-extrabold text-gray-400 mb-1 uppercase tracking-wider">Meta (Foguete)</label>
+                    <select id="frases-target-select" onchange="savePlayerProfile()" class="w-full bg-emerald-50/60 border-2 border-emerald-200 rounded-xl px-2 py-1.5 text-xs font-extrabold text-center text-emerald-700 focus:border-emerald-400 outline-none transition-all cursor-pointer">
+                        <option value="5" selected>5 Acertos</option>
+                        <option value="10">10 Acertos</option>
+                        <option value="15">15 Acertos</option>
+                        <option value="20">20 Acertos</option>
+                    </select>
                 </div>
-            </a>
+
+                <a href="frases.html" onclick="validateNavigation(event, 'frases.html')" class="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-extrabold py-2.5 rounded-xl shadow-md shadow-emerald-200 transition-colors flex items-center justify-center gap-1.5 text-sm">
+                    Praticar <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                </a>
+            </div>
+
+            <!-- MÓDULO 4: QUADRO DE PALAVRAS -->
+            <div class="group bg-white rounded-[2rem] p-5 border-4 border-sky-200 hover:border-sky-400 shadow-xl shadow-sky-100/50 transition-all hover:-translate-y-1.5 flex flex-col items-center text-center relative overflow-hidden">
+                <div class="w-20 h-20 bg-sky-100 rounded-3xl flex items-center justify-center text-4xl mb-3 group-hover:scale-110 transition-transform animate-float" style="animation-delay: 0.9s;" aria-hidden="true">
+                    📋
+                </div>
+                <h3 class="text-lg font-extrabold text-gray-800 mb-1.5">Quadro de Palavras</h3>
+                <p class="text-gray-500 text-xs font-medium mb-4 flex-grow">
+                    Complete simultaneamente cinco palavras escolhendo as sílabas corretas no banco inferior.
+                </p>
+
+                <div class="w-full mb-3">
+                    <label for="quadro-target-select" class="block text-[10px] font-extrabold text-gray-400 mb-1 uppercase tracking-wider">Meta (Foguete)</label>
+                    <select id="quadro-target-select" onchange="savePlayerProfile()" class="w-full bg-sky-50/60 border-2 border-sky-200 rounded-xl px-2 py-1.5 text-xs font-extrabold text-center text-sky-700 focus:border-sky-400 outline-none transition-all cursor-pointer">
+                        <option value="3">3 Quadros</option>
+                        <option value="5" selected>5 Quadros</option>
+                        <option value="10">10 Quadros</option>
+                        <option value="15">15 Quadros</option>
+                    </select>
+                </div>
+
+                <a href="quadro-silabas.html" onclick="validateNavigation(event, 'quadro-silabas.html')" class="w-full bg-sky-500 hover:bg-sky-600 text-white font-extrabold py-2.5 rounded-xl shadow-md shadow-sky-200 transition-colors flex items-center justify-center gap-1.5 text-sm">
+                    Praticar <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                </a>
+            </div>
 
         </div>
     </main>
 
     <!-- RODAPÉ -->
-    <footer class="w-full max-w-5xl mx-auto px-4 py-4 text-center text-xs font-semibold text-gray-400">
+    <footer class="w-full max-w-6xl mx-auto px-4 py-4 text-center text-xs font-semibold text-gray-400">
         Plataforma Educativa Interativa • Progresso salvo automaticamente no navegador
     </footer>
 
@@ -148,7 +173,6 @@
 
         const STORAGE_KEY = 'silabando_state';
 
-        // Carrega o nome e as metas salvas anteriormente no localStorage
         function loadPlayerProfile() {
             try {
                 const saved = localStorage.getItem(STORAGE_KEY);
@@ -163,31 +187,39 @@
                     if (data.letraInicialTarget) {
                         document.getElementById('letra-target-select').value = data.letraInicialTarget;
                     }
+                    if (data.frasesTarget) {
+                        document.getElementById('frases-target-select').value = data.frasesTarget;
+                    }
+                    if (data.quadroTarget) {
+                        document.getElementById('quadro-target-select').value = data.quadroTarget;
+                    }
                 }
             } catch (e) {
                 console.error("Erro ao acessar o armazenamento local.", e);
             }
         }
 
-        // Salva o nome e as metas escolhidas para compartilhamento entre páginas
         function savePlayerProfile() {
             const nameInput = document.getElementById('global-player-name').value.trim();
             const silabasTarget = parseInt(document.getElementById('silabas-target-select').value);
             const letraTarget = parseInt(document.getElementById('letra-target-select').value);
+            const frasesTarget = parseInt(document.getElementById('frases-target-select').value);
+            const quadroTarget = parseInt(document.getElementById('quadro-target-select').value);
             
             try {
                 const saved = localStorage.getItem(STORAGE_KEY);
-                const data = saved ? JSON.parse(saved) : { silabasScore: 0, letraInicialScore: 0 };
+                const data = saved ? JSON.parse(saved) : { silabasScore: 0, letraInicialScore: 0, frasesScore: 0, quadroScore: 0 };
                 data.name = nameInput;
                 data.silabasTarget = silabasTarget;
                 data.letraInicialTarget = letraTarget;
+                data.frasesTarget = frasesTarget;
+                data.quadroTarget = quadroTarget;
                 localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
             } catch (e) {
                 console.error("Erro ao gravar no armazenamento local.", e);
             }
         }
 
-        // Garante que o usuário preencheu o nome antes de abrir uma atividade
         function validateNavigation(event, targetUrl) {
             const nameInput = document.getElementById('global-player-name');
             if (!nameInput.value.trim()) {
