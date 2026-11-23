@@ -269,7 +269,7 @@
             currentScore: 0,
             currentItem: null,
             targetLetter: '',
-            options: [], // { letter: 'A', disabled: false, status: 'default' | 'wrong' | 'correct' }
+            options: [],
             attemptsLeft: 3,
             isRoundOver: false,
             shakeError: false
@@ -291,7 +291,7 @@
                 }
 
                 state.playerName = data.name.trim();
-                state.targetScore = DEFAULT_TARGET;
+                state.targetScore = parseInt(data.letraInicialTarget) || DEFAULT_TARGET;
                 state.currentScore = typeof data.letraInicialScore === 'number' ? data.letraInicialScore : 0;
 
                 if (state.currentScore >= state.targetScore) {
@@ -320,6 +320,7 @@
                 const data = saved ? JSON.parse(saved) : {};
                 data.name = state.playerName;
                 data.letraInicialScore = state.currentScore;
+                data.letraInicialTarget = state.targetScore;
                 localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
             } catch (e) {
                 console.error("Erro ao salvar progresso.", e);
@@ -381,7 +382,7 @@
             }
         };
 
-        // --- NORMALIZAÇÃO DE LETRA INICIAL (REMOVE ACENTOS) ---
+        // --- NORMALIZAÇÃO DE LETRA INICIAL ---
         function getNormalizedFirstLetter(word) {
             return word.charAt(0)
                 .normalize('NFD')
@@ -415,7 +416,6 @@
             state.isRoundOver = false;
             state.shakeError = false;
 
-            // Gera 3 letras distratoras distintas da correta
             const distractors = ALPHABET.filter(l => l !== state.targetLetter);
             const selectedDistractors = [];
             while (selectedDistractors.length < 3) {
@@ -431,7 +431,6 @@
             }));
 
             render();
-            // Pronuncia automaticamente a figura ao carregar para auxiliar a criança
             setTimeout(() => speakCurrentWord(), 300);
             announceAria(`Nova figura exibida. Escolha a letra inicial entre ${rawOptions.join(', ')}.`);
         }
@@ -458,7 +457,6 @@
             savePlayerProfile();
             updateProgressVisual();
 
-            // Pronuncia a letra e a palavra completa
             speakText(`${state.targetLetter} de ${state.currentItem.word}!`, 0.8);
             announceAria(`Correto! ${state.targetLetter} de ${state.currentItem.word}.`);
 
@@ -573,7 +571,6 @@
         }
 
         function render() {
-            // Corações
             document.getElementById('hearts-container').innerHTML = [1, 2, 3].map(heart => `
                 <i data-lucide="heart" aria-hidden="true" class="w-5 h-5 transition-colors drop-shadow-sm ${heart <= state.attemptsLeft ? 'text-red-500 fill-red-500' : 'text-gray-200 fill-gray-200'}"></i>
             `).join('');
@@ -584,7 +581,6 @@
 
             document.getElementById('emoji-display').innerText = state.currentItem.emoji;
 
-            // Slot Alvo vs Palavra Revelada
             const targetSlot = document.getElementById('target-slot');
             const revealedWord = document.getElementById('revealed-word');
 
@@ -603,7 +599,6 @@
                 targetSlot.innerText = '?';
             }
 
-            // Opções de Letras
             if (!state.isRoundOver) {
                 const optionsHtml = state.options.map(opt => {
                     let btnStyle = 'bg-white border-indigo-200 text-indigo-600 hover:border-indigo-400 hover:shadow-md hover:-translate-y-1 cursor-pointer';
@@ -628,7 +623,6 @@
 
                 document.getElementById('options-container').innerHTML = optionsHtml;
 
-                // Anexa eventos de arrastar nas letras
                 document.querySelectorAll('.letter-option').forEach(btn => {
                     btn.addEventListener('dragstart', () => {
                         draggedLetter = btn.dataset.letter;
