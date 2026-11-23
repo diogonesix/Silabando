@@ -1,0 +1,922 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Silabando - Quadro de Palavras</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Canvas Confetti -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- Polyfill para suporte a Drag and Drop em dispositivos móveis (Touch) -->
+    <script src="https://bernardo-castilho.github.io/DragDropTouch/DragDropTouch.js"></script>
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Nunito', sans-serif;
+            background-color: #FDFBF7;
+            background-image: radial-gradient(#d1d5db 2px, transparent 2px);
+            background-size: 24px 24px;
+            overflow: hidden;
+            touch-action: manipulation;
+        }
+        
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 9999px; }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20% { transform: translateX(-6px); }
+            40% { transform: translateX(6px); }
+            60% { transform: translateX(-6px); }
+            80% { transform: translateX(6px); }
+        }
+        .animate-shake { animation: shake 0.4s ease-in-out; }
+
+        @keyframes rocket-launch {
+            0% { transform: translateY(0); }
+            10% { transform: translateY(10px); }
+            100% { transform: translateY(-1000px); }
+        }
+        .animate-launch { animation: rocket-launch 2s ease-in forwards; }
+
+        .slot-piece, .bank-piece {
+            touch-action: none;
+        }
+    </style>
+</head>
+<body class="h-[100dvh] w-full flex flex-col text-gray-800 selection:bg-sky-200">
+
+    <!-- ARIA Live Region para Leitores de Tela -->
+    <div id="aria-announcer" aria-live="polite" class="sr-only"></div>
+
+    <!-- TELA DE VITÓRIA (Meta Atingida) -->
+    <div id="victory-screen" class="absolute inset-0 z-50 hidden flex-col items-center justify-center p-4 bg-[#FDFBF7]/95 backdrop-blur-sm">
+        <div class="bg-sky-50 p-6 sm:p-10 rounded-[2rem] shadow-2xl shadow-sky-200 border-4 border-sky-400 max-w-lg w-full text-center flex flex-col items-center relative overflow-hidden">
+            
+            <div class="text-6xl mb-4 animate-bounce" aria-hidden="true">🏆</div>
+            
+            <h1 class="text-4xl font-extrabold text-sky-700 mb-2">Parabéns, <span id="victory-name">Jogador</span>!</h1>
+            <p class="text-lg text-sky-600 font-bold mb-6">Você completou <span id="victory-target">5</span> quadros de palavras!</p>
+            
+            <div class="bg-white p-6 rounded-2xl shadow-md border-2 border-sky-100 w-full mb-8 transform hover:scale-105 transition-transform cursor-default">
+                <div class="text-4xl mb-2" aria-hidden="true">🎯</div>
+                <p class="text-sky-800 font-extrabold text-xl leading-tight">Excelente domínio de análise silábica!</p>
+                <p class="text-gray-500 font-bold mt-2 text-sm">Você já pode retornar ao menu inicial ou iniciar um novo desafio.</p>
+            </div>
+
+            <div class="w-full flex flex-col sm:flex-row gap-3">
+                <a href="index.html" class="w-full sm:w-1/2 bg-white hover:bg-gray-50 text-gray-700 border-2 border-gray-200 rounded-xl py-3 text-lg font-extrabold shadow-sm active:scale-95 transition-all flex items-center justify-center gap-2">
+                    <i data-lucide="home" class="w-5 h-5"></i> Menu Inicial
+                </a>
+                <button onclick="resetGame()" class="w-full sm:w-1/2 bg-sky-500 hover:bg-sky-600 text-white rounded-xl py-3 text-lg font-extrabold shadow-lg shadow-sky-200 active:scale-95 transition-all flex items-center justify-center gap-2">
+                    Jogar Novamente <i data-lucide="rotate-ccw" class="w-5 h-5"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- JOGO PRINCIPAL -->
+    <div id="game-container" class="h-full w-full flex flex-col">
+        <!-- HEADER -->
+        <header class="w-full max-w-6xl mx-auto px-4 pt-2 pb-1 flex justify-between items-center shrink-0">
+            <a href="index.html" class="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center bg-white border-2 border-gray-200 rounded-xl text-gray-500 hover:text-sky-600 hover:border-sky-300 shadow-sm transition-colors" title="Voltar ao Menu Inicial" aria-label="Voltar ao Menu Inicial">
+                <i data-lucide="home" class="w-5 h-5"></i>
+            </a>
+
+            <div class="flex flex-col items-center text-center">
+                <div class="bg-sky-50 text-sky-700 uppercase tracking-widest text-[9px] sm:text-[10px] font-bold px-3 py-0.5 rounded-full mb-0.5 shadow-sm border border-sky-200">
+                    Quadro de Palavras • <span id="header-player-name" class="font-extrabold">Jogador</span>
+                </div>
+                <h1 class="text-xl sm:text-2xl font-extrabold text-gray-800 tracking-tight mb-0">Complete as 5 Palavras</h1>
+            </div>
+
+            <button onclick="toggleFullscreen()" class="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center bg-white border-2 border-gray-200 rounded-xl text-gray-500 hover:text-sky-600 hover:border-sky-300 shadow-sm transition-colors" title="Tela Cheia (F11)" aria-label="Alternar Tela Cheia">
+                <i data-lucide="maximize" class="w-5 h-5"></i>
+            </button>
+        </header>
+
+        <!-- BARRA SUPERIOR DE CONTROLE -->
+        <section class="w-full max-w-4xl mx-auto px-4 mb-1.5 flex justify-between items-center shrink-0">
+            <div class="flex items-center gap-3">
+                <div class="text-xs sm:text-sm font-bold text-gray-500 bg-white px-3 py-1 rounded-xl border border-gray-200 shadow-sm">
+                    Quadros: <span id="score-counter-mobile" class="text-sky-600 font-black">0</span> / <span id="target-counter-mobile">5</span>
+                </div>
+                <div id="hearts-container" class="flex items-center gap-1 bg-white px-2.5 py-1 rounded-xl border border-gray-200 shadow-sm" aria-label="Tentativas restantes"></div>
+            </div>
+            
+            <button onclick="loadNewGrid()" class="bg-white hover:bg-gray-50 text-gray-700 px-3 py-1 rounded-xl font-bold shadow-sm border-2 border-gray-200 transition-all active:scale-95 flex items-center gap-1.5 text-xs sm:text-sm" title="Sortear Novo Quadro" aria-label="Sortear novo quadro de imagens">
+                <i data-lucide="shuffle" class="w-4 h-4 text-sky-600"></i> Novo Quadro
+            </button>
+        </section>
+
+        <!-- ÁREA PRINCIPAL -->
+        <main class="flex-grow w-full max-w-6xl mx-auto px-2 sm:px-4 pb-2 flex flex-col md:flex-row gap-3 items-center justify-center min-h-0 relative">
+            
+            <!-- CARTÃO DO QUADRO E BANCO -->
+            <div id="game-card" class="w-full max-w-4xl bg-white rounded-[1.5rem] shadow-xl shadow-gray-200/60 border border-gray-100 p-2.5 sm:p-4 flex flex-col justify-between h-full min-h-0 transition-transform">
+                
+                <!-- GRADE DAS 5 LINHAS (Coluna 1: Imagem | Colunas seguintes: Sílabas) -->
+                <div id="grid-container" class="w-full flex-grow flex flex-col justify-around gap-1.5 sm:gap-2 overflow-y-auto custom-scrollbar pr-1 min-h-0" aria-label="Quadro com 5 palavras para completar">
+                    <!-- Renderizado via JS -->
+                </div>
+
+                <!-- BOTÃO CONFERIR -->
+                <div class="w-full flex justify-center my-2 shrink-0">
+                    <button id="check-btn" onclick="checkGrid()" disabled class="px-6 sm:px-8 py-2 rounded-xl font-bold text-sm sm:text-base text-white shadow-md transition-all flex items-center gap-2 bg-gray-300 cursor-not-allowed shadow-none text-gray-100">
+                        <i data-lucide="check-circle" class="w-5 h-5"></i> Conferir Quadro
+                    </button>
+                </div>
+
+                <!-- BANCO INFERIOR DE SÍLABAS -->
+                <div id="bank-container" class="w-full bg-sky-50/60 border-2 border-sky-100 rounded-2xl p-2 sm:p-3 flex flex-wrap justify-center gap-1.5 sm:gap-2 max-h-[28%] overflow-y-auto custom-scrollbar shrink-0" aria-label="Banco de sílabas disponíveis">
+                    <!-- Renderizado via JS -->
+                </div>
+            </div>
+
+            <!-- FOGUETE PROGRESSO (Desktop - Vertical) -->
+            <div class="hidden md:flex h-full w-20 flex-col items-center justify-end pb-6 relative shrink-0">
+                <div class="absolute top-0 text-xs font-bold text-gray-500 uppercase tracking-widest bg-white px-2 py-1 rounded-full shadow-sm border border-gray-100 z-10 whitespace-nowrap">
+                    Meta: <span id="rocket-target-desktop" class="text-sky-600">5</span>
+                </div>
+                <div class="absolute h-full w-7 bg-sky-100/50 rounded-full border-2 border-dashed border-sky-200 top-4"></div>
+                <div id="rocket-desktop" class="z-20 transition-all duration-1000 ease-out" style="transform: translateY(0px);">
+                    <svg width="70" height="105" viewBox="0 0 100 150" xmlns="http://www.w3.org/2000/svg" class="drop-shadow-xl" aria-hidden="true">
+                        <path d="M 40 110 Q 50 150 60 110 Q 55 120 50 140 Q 45 120 40 110" fill="#38bdf8" class="animate-pulse" />
+                        <path d="M 45 110 Q 50 135 55 110 Q 52 115 50 130 Q 48 115 45 110" fill="#fef08a" class="animate-pulse" />
+                        <path d="M 30 70 C 15 80 15 100 20 115 C 30 100 30 80 30 70" fill="#0284c7" />
+                        <path d="M 70 70 C 85 80 85 100 80 115 C 70 100 70 80 70 70" fill="#0284c7" />
+                        <path d="M 45 85 L 55 85 L 55 120 L 50 130 L 45 120 Z" fill="#0369a1" />
+                        <path d="M 25 70 C 25 20 50 0 50 0 C 50 0 75 20 75 70 C 75 100 65 110 50 110 C 35 110 25 100 25 70 Z" fill="#fffbeb" stroke="#d6d3d1" stroke-width="2"/>
+                        <path d="M 33 30 C 40 15 50 0 50 0 C 50 0 60 15 67 30 Q 50 35 33 30 Z" fill="#0ea5e9" />
+                        <circle cx="50" cy="50" r="12" fill="#bae6fd" stroke="#94a3b8" stroke-width="3" />
+                        <circle cx="50" cy="50" r="8" fill="#e0f2fe" />
+                    </svg>
+                </div>
+            </div>
+        </main>
+
+        <!-- FOGUETE PROGRESSO (Mobile - Horizontal) -->
+        <div class="md:hidden w-full h-14 bg-white border-t-2 border-gray-100 flex items-center px-4 shrink-0 relative overflow-hidden">
+            <div class="absolute left-2 text-[10px] font-bold text-gray-400 uppercase leading-tight z-10">
+                <span id="player-name-display" class="text-sky-600">Nome</span><br>
+                Progresso (<span id="rocket-target-mobile">5</span>)
+            </div>
+            <div class="w-full h-3.5 bg-sky-100/50 rounded-full border-2 border-dashed border-sky-200 absolute left-0 top-1/2 -translate-y-1/2 ml-16 mr-4"></div>
+            <div id="rocket-mobile" class="z-20 transition-all duration-1000 ease-out absolute left-16 top-1/2 -translate-y-1/2 rotate-90 scale-50" style="transform: translateY(-50%) rotate(90deg) translateX(0px);">
+                <svg width="70" height="105" viewBox="0 0 100 150" xmlns="http://www.w3.org/2000/svg" class="drop-shadow-xl" aria-hidden="true">
+                    <path d="M 40 110 Q 50 150 60 110 Q 55 120 50 140 Q 45 120 40 110" fill="#38bdf8" class="animate-pulse" />
+                    <path d="M 45 110 Q 50 135 55 110 Q 52 115 50 130 Q 48 115 45 110" fill="#fef08a" class="animate-pulse" />
+                    <path d="M 30 70 C 15 80 15 100 20 115 C 30 100 30 80 30 70" fill="#0284c7" />
+                    <path d="M 70 70 C 85 80 85 100 80 115 C 70 100 70 80 70 70" fill="#0284c7" />
+                    <path d="M 45 85 L 55 85 L 55 120 L 50 130 L 45 120 Z" fill="#0369a1" />
+                    <path d="M 25 70 C 25 20 50 0 50 0 C 50 0 75 20 75 70 C 75 100 65 110 50 110 C 35 110 25 100 25 70 Z" fill="#fffbeb" stroke="#d6d3d1" stroke-width="2"/>
+                    <path d="M 33 30 C 40 15 50 0 50 0 C 50 0 60 15 67 30 Q 50 35 33 30 Z" fill="#0ea5e9" />
+                    <circle cx="50" cy="50" r="12" fill="#bae6fd" stroke="#94a3b8" stroke-width="3" />
+                    <circle cx="50" cy="50" r="8" fill="#e0f2fe" />
+                </svg>
+            </div>
+        </div>
+    </div>
+
+    <!-- SCRIPT PRINCIPAL -->
+    <script>
+        lucide.createIcons();
+
+        const STORAGE_KEY = 'silabando_state';
+        const DEFAULT_TARGET = 5;
+        const ROWS_COUNT = 5;
+        const AUDIO_LIMIT = 3;
+        let countdownInterval;
+        let lastMoveTimestamp = 0;
+
+        // --- BANCO DE PALAVRAS ---
+        const WORDS_POOL = [
+            { word: 'banana', syllables: ['ba', 'na', 'na'], emoji: '🍌' },
+            { word: 'bola', syllables: ['bo', 'la'], emoji: '⚽' },
+            { word: 'casa', syllables: ['ca', 'sa'], emoji: '🏠' },
+            { word: 'sapo', syllables: ['sa', 'po'], emoji: '🐸' },
+            { word: 'pipoca', syllables: ['pi', 'po', 'ca'], emoji: '🍿' },
+            { word: 'jacaré', syllables: ['ja', 'ca', 'ré'], emoji: '🐊' },
+            { word: 'gato', syllables: ['ga', 'to'], emoji: '🐱' },
+            { word: 'cachorro', syllables: ['ca', 'chor', 'ro'], emoji: '🐶' },
+            { word: 'abacaxi', syllables: ['a', 'ba', 'ca', 'xi'], emoji: '🍍' },
+            { word: 'sorvete', syllables: ['sor', 've', 'te'], emoji: '🍦' },
+            { word: 'foguete', syllables: ['fo', 'gue', 'te'], emoji: '🚀' },
+            { word: 'uva', syllables: ['u', 'va'], emoji: '🍇' },
+            { word: 'morango', syllables: ['mo', 'ran', 'go'], emoji: '🍓' },
+            { word: 'leão', syllables: ['le', 'ão'], emoji: '🦁' },
+            { word: 'macaco', syllables: ['ma', 'ca', 'co'], emoji: '🐵' },
+            { word: 'peixe', syllables: ['pei', 'xe'], emoji: '🐟' },
+            { word: 'pato', syllables: ['pa', 'to'], emoji: '🦆' },
+            { word: 'vaca', syllables: ['va', 'ca'], emoji: '🐮' },
+            { word: 'cavalo', syllables: ['ca', 'va', 'lo'], emoji: '🐴' },
+            { word: 'urso', syllables: ['ur', 'so'], emoji: '🐻' },
+            { word: 'cobra', syllables: ['co', 'bra'], emoji: '🐍' },
+            { word: 'abelha', syllables: ['a', 'be', 'lha'], emoji: '🐝' },
+            { word: 'formiga', syllables: ['for', 'mi', 'ga'], emoji: '🐜' },
+            { word: 'caracol', syllables: ['ca', 'ra', 'col'], emoji: '🐌' },
+            { word: 'árvore', syllables: ['ár', 'vo', 're'], emoji: '🌳' },
+            { word: 'lua', syllables: ['lu', 'a'], emoji: '🌙' },
+            { word: 'estrela', syllables: ['es', 'tre', 'la'], emoji: '⭐' },
+            { word: 'nuvem', syllables: ['nu', 'vem'], emoji: '☁️' },
+            { word: 'chuva', syllables: ['chu', 'va'], emoji: '🌧️' },
+            { word: 'carro', syllables: ['car', 'ro'], emoji: '🚗' },
+            { word: 'avião', syllables: ['a', 'vi', 'ão'], emoji: '✈️' },
+            { word: 'barco', syllables: ['bar', 'co'], emoji: '⛵' },
+            { word: 'livro', syllables: ['li', 'vro'], emoji: '📖' },
+            { word: 'lápis', syllables: ['lá', 'pis'], emoji: '✏️' },
+            { word: 'escola', syllables: ['es', 'co', 'la'], emoji: '🏫' },
+            { word: 'menino', syllables: ['me', 'ni', 'no'], emoji: '👦' },
+            { word: 'menina', syllables: ['me', 'ni', 'na'], emoji: '👧' },
+            { word: 'bebê', syllables: ['be', 'bê'], emoji: '👶' },
+            { word: 'fogo', syllables: ['fo', 'go'], emoji: '🔥' },
+            { word: 'água', syllables: ['á', 'gua'], emoji: '💧' },
+            { word: 'bolo', syllables: ['bo', 'lo'], emoji: '🎂' },
+            { word: 'maçã', syllables: ['ma', 'çã'], emoji: '🍎' },
+            { word: 'dado', syllables: ['da', 'do'], emoji: '🎲' },
+            { word: 'rato', syllables: ['ra', 'to'], emoji: '🐭' },
+            { word: 'robô', syllables: ['ro', 'bô'], emoji: '🤖' },
+            { word: 'zebra', syllables: ['ze', 'bra'], emoji: '🦓' }
+        ];
+
+        const DISTRACTOR_POOL = ['ba', 'pa', 'ma', 'la', 'de', 'te', 'fa', 'va', 'ca', 'ga', 'ro', 'so', 'lu', 'mu', 'no', 'jo', 'pi', 'ki', 'vu', 'zu', 'ti', 'do', 'ra', 'me'];
+
+        // --- ESTADO DO JOGO ---
+        const state = {
+            playerName: '',
+            targetScore: DEFAULT_TARGET,
+            currentScore: 0,
+            rows: [], // Array de 5 objetos: { word, emoji, targetSyllables, slots, isLocked, isError }
+            selectedRowIndex: 0,
+            bankSyllables: [],
+            attemptsLeft: 3,
+            isCooldown: false,
+            isAllSuccess: false,
+            showAllCorrect: false
+        };
+
+        // --- INICIALIZAÇÃO VIA LOCALSTORAGE ---
+        function initGame() {
+            try {
+                const saved = localStorage.getItem(STORAGE_KEY);
+                if (!saved) {
+                    window.location.href = 'index.html';
+                    return;
+                }
+
+                const data = JSON.parse(saved);
+                if (!data.name || data.name.trim() === '') {
+                    window.location.href = 'index.html';
+                    return;
+                }
+
+                state.playerName = data.name.trim();
+                state.targetScore = parseInt(data.quadroTarget) || DEFAULT_TARGET;
+                state.currentScore = typeof data.quadroScore === 'number' ? data.quadroScore : 0;
+
+                if (state.currentScore >= state.targetScore) {
+                    state.currentScore = 0;
+                }
+
+                document.getElementById('header-player-name').innerText = state.playerName;
+                document.getElementById('player-name-display').innerText = state.playerName;
+                document.getElementById('rocket-target-desktop').innerText = state.targetScore;
+                document.getElementById('rocket-target-mobile').innerText = state.targetScore;
+                document.getElementById('target-counter-mobile').innerText = state.targetScore;
+
+                savePlayerProfile();
+                updateRocketVisual();
+                loadNewGrid();
+            } catch (e) {
+                console.error("Erro ao inicializar o módulo.", e);
+                window.location.href = 'index.html';
+            }
+        }
+
+        function savePlayerProfile() {
+            try {
+                const saved = localStorage.getItem(STORAGE_KEY);
+                const data = saved ? JSON.parse(saved) : {};
+                data.name = state.playerName;
+                data.quadroScore = state.currentScore;
+                data.quadroTarget = state.targetScore;
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+            } catch (e) {
+                console.error("Erro ao salvar progresso.", e);
+            }
+        }
+
+        window.onload = initGame;
+
+        function announceAria(text) {
+            const announcer = document.getElementById('aria-announcer');
+            if (announcer) announcer.innerText = text;
+        }
+
+        // --- SISTEMA AUDIOVISUAL ---
+        const playTone = (freq, type, duration, vol = 0.1) => {
+            try {
+                const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+                if (!AudioContextClass) return;
+                const ctx = new AudioContextClass();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                
+                osc.type = type;
+                osc.frequency.setValueAtTime(freq, ctx.currentTime);
+                gain.gain.setValueAtTime(vol, ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + duration);
+                
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start();
+                osc.stop(ctx.currentTime + duration);
+            } catch (e) {}
+        };
+
+        const playSuccessSound = () => {
+            playTone(523.25, 'sine', 0.45);
+            setTimeout(() => playTone(659.25, 'sine', 0.45), 100);
+            setTimeout(() => playTone(783.99, 'sine', 0.55), 200);
+        };
+
+        const playErrorSound = () => {
+            playTone(150, 'sawtooth', 0.3, 0.15);
+        };
+
+        const speakText = (text, rate = 0.8) => {
+            if (!('speechSynthesis' in window)) return null;
+            window.speechSynthesis.cancel();
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = 'pt-BR';
+            utterance.rate = rate;
+            utterance.pitch = 1.1;
+            window.speechSynthesis.speak(utterance);
+            return utterance;
+        };
+
+        const adjustSyllablePhonetics = (syllable) => {
+            const lower = syllable.toLowerCase();
+            if (lower === 'xi') return 'xí';
+            if (lower === 'ro') return 'rô';
+            if (lower.length <= 3 && /^[a-zç]*[aeiou]$/.test(lower)) {
+                return lower.replace(/a$/, 'á').replace(/e$/, 'ê').replace(/i$/, 'í').replace(/o$/, 'ô').replace(/u$/, 'ú');
+            }
+            return lower;
+        };
+
+        function speakRowWord(rowIndex) {
+            const row = state.rows[rowIndex];
+            if (row) {
+                speakText(row.word, 0.7);
+            }
+        }
+
+        // --- GERAÇÃO DO QUADRO DE 5 PALAVRAS ---
+        function resetGame() {
+            state.currentScore = 0;
+            savePlayerProfile();
+            document.getElementById('victory-screen').classList.add('hidden');
+            document.getElementById('rocket-desktop').classList.remove('animate-launch');
+            document.getElementById('rocket-mobile').classList.remove('animate-launch');
+            updateRocketVisual();
+            loadNewGrid();
+        }
+
+        function loadNewGrid() {
+            clearInterval(countdownInterval);
+            
+            // Seleciona 5 palavras distintas
+            const shuffledPool = [...WORDS_POOL].sort(() => Math.random() - 0.5);
+            const selectedItems = shuffledPool.slice(0, ROWS_COUNT);
+            const baseTime = Date.now();
+
+            state.rows = selectedItems.map((item, rowIdx) => ({
+                word: item.word,
+                emoji: item.emoji,
+                targetSyllables: [...item.syllables],
+                slots: new Array(item.syllables.length).fill(null),
+                isLocked: false,
+                isError: false
+            }));
+
+            // Coleta todas as sílabas das 5 palavras
+            let allPieces = [];
+            selectedItems.forEach((item, rIdx) => {
+                item.syllables.forEach((syl, sIdx) => {
+                    allPieces.push({
+                        id: `syl-${rIdx}-${sIdx}-${baseTime}-${Math.random().toString(36).substring(2, 6)}`,
+                        text: syl,
+                        playCount: 0
+                    });
+                });
+            });
+
+            // Adiciona 4 sílabas distratoras para evitar resolução por eliminação simples
+            const usedTexts = new Set(allPieces.map(p => p.text));
+            const availableDistractors = DISTRACTOR_POOL.filter(d => !usedTexts.has(d)).sort(() => Math.random() - 0.5);
+            for (let i = 0; i < 4 && i < availableDistractors.length; i++) {
+                allPieces.push({
+                    id: `dist-${i}-${baseTime}-${Math.random().toString(36).substring(2, 6)}`,
+                    text: availableDistractors[i],
+                    playCount: 0
+                });
+            }
+
+            state.bankSyllables = allPieces.sort(() => Math.random() - 0.5);
+            state.selectedRowIndex = 0;
+            state.attemptsLeft = 3;
+            state.isCooldown = false;
+            state.isAllSuccess = false;
+            state.showAllCorrect = false;
+
+            render();
+            announceAria("Novo quadro carregado com 5 imagens. Selecione uma linha ou arraste as sílabas para formar as palavras.");
+        }
+
+        function selectRow(rowIndex) {
+            if (state.isCooldown || state.isAllSuccess || state.showAllCorrect) return;
+            if (state.rows[rowIndex] && !state.rows[rowIndex].isLocked) {
+                state.selectedRowIndex = rowIndex;
+                render();
+            }
+        }
+
+        function handlePieceInteract(piece, domElement = null) {
+            if (!state.isCooldown && !state.isAllSuccess && !state.showAllCorrect) {
+                if (piece.playCount === undefined) piece.playCount = 0;
+                
+                if (piece.playCount < AUDIO_LIMIT) {
+                    piece.playCount++;
+                    speakText(adjustSyllablePhonetics(piece.text), 0.8);
+                    
+                    if (domElement) {
+                        const container = domElement.closest('.slot, .bank-piece');
+                        if (container) {
+                            const dots = container.querySelectorAll('.audio-dot');
+                            dots.forEach((dot, idx) => {
+                                if (idx >= (AUDIO_LIMIT - piece.playCount)) {
+                                    dot.classList.remove('bg-sky-500', 'bg-white/80');
+                                    dot.classList.add('bg-gray-200', 'bg-black/10');
+                                }
+                            });
+                        }
+                    }
+                }
+            }
+        }
+
+        // --- MOVIMENTAÇÃO DE PEÇAS ---
+        let draggedPiece = null;
+        let dragSource = null;
+
+        function findTargetSlotForClick() {
+            // 1. Verifica se a linha atualmente selecionada tem espaço vazio
+            const currentRow = state.rows[state.selectedRowIndex];
+            if (currentRow && !currentRow.isLocked) {
+                const emptyIdx = currentRow.slots.findIndex(s => s === null);
+                if (emptyIdx !== -1) {
+                    return { rowIndex: state.selectedRowIndex, slotIndex: emptyIdx };
+                }
+            }
+            // 2. Caso contrário, busca a primeira linha desbloqueada com espaço vazio
+            for (let r = 0; r < state.rows.length; r++) {
+                if (!state.rows[r].isLocked) {
+                    const emptyIdx = state.rows[r].slots.findIndex(s => s === null);
+                    if (emptyIdx !== -1) {
+                        state.selectedRowIndex = r;
+                        return { rowIndex: r, slotIndex: emptyIdx };
+                    }
+                }
+            }
+            return null;
+        }
+
+        function moveBankToSlot(piece, targetRowIndex = null, targetSlotIndex = null) {
+            if (!piece || state.isAllSuccess || state.isCooldown || state.showAllCorrect) return;
+            
+            const now = Date.now();
+            if (now - lastMoveTimestamp < 220) return;
+            lastMoveTimestamp = now;
+
+            const bankIndex = state.bankSyllables.findIndex(p => p.id === piece.id);
+            if (bankIndex === -1) return;
+
+            let destRow = targetRowIndex;
+            let destSlot = targetSlotIndex;
+
+            if (destRow === null || destSlot === null) {
+                const found = findTargetSlotForClick();
+                if (!found) return;
+                destRow = found.rowIndex;
+                destSlot = found.slotIndex;
+            }
+
+            const rowObj = state.rows[destRow];
+            if (!rowObj || rowObj.isLocked || rowObj.slots[destSlot] !== null) return;
+
+            handlePieceInteract(piece, document.querySelector(`[data-id="${piece.id}"]`));
+
+            state.bankSyllables.splice(bankIndex, 1);
+            rowObj.slots[destSlot] = piece;
+            state.selectedRowIndex = destRow;
+
+            // Avança automaticamente o foco para a próxima linha incompleta se a atual encheu
+            if (rowObj.slots.every(s => s !== null)) {
+                const nextIncomplete = state.rows.findIndex((r, idx) => idx > destRow && !r.isLocked && r.slots.includes(null));
+                if (nextIncomplete !== -1) {
+                    state.selectedRowIndex = nextIncomplete;
+                } else {
+                    const firstIncomplete = state.rows.findIndex(r => !r.isLocked && r.slots.includes(null));
+                    if (firstIncomplete !== -1) state.selectedRowIndex = firstIncomplete;
+                }
+            }
+
+            render();
+        }
+
+        function moveSlotToBank(rowIndex, slotIndex) {
+            if (state.isAllSuccess || state.isCooldown || state.showAllCorrect) return;
+            
+            const now = Date.now();
+            if (now - lastMoveTimestamp < 220) return;
+            lastMoveTimestamp = now;
+
+            const rowObj = state.rows[rowIndex];
+            if (!rowObj || rowObj.isLocked) return;
+
+            const piece = rowObj.slots[slotIndex];
+            if (!piece) return;
+
+            handlePieceInteract(piece, document.querySelector(`.slot[data-row="${rowIndex}"][data-slot="${slotIndex}"]`));
+
+            rowObj.slots[slotIndex] = null;
+            state.selectedRowIndex = rowIndex;
+            if (!state.bankSyllables.some(p => p.id === piece.id)) {
+                state.bankSyllables.push(piece);
+            }
+            render();
+        }
+
+        // --- VALIDAÇÃO DO QUADRO ---
+        function checkGrid() {
+            if (state.isCooldown || state.isAllSuccess || state.showAllCorrect) return;
+            const isGridFull = state.rows.every(r => r.slots.every(s => s !== null));
+            if (!isGridFull) return;
+
+            state.isCooldown = true;
+            let allCorrect = true;
+
+            state.rows.forEach(row => {
+                const formed = row.slots.map(s => s.text).join('');
+                if (formed.toLowerCase() === row.word.toLowerCase()) {
+                    row.isLocked = true;
+                    row.isError = false;
+                } else {
+                    row.isError = true;
+                    allCorrect = false;
+                }
+            });
+
+            render();
+
+            if (allCorrect) {
+                handleGridWin();
+            } else {
+                handleGridError();
+            }
+        }
+
+        function handleGridWin() {
+            state.isCooldown = false;
+            state.isAllSuccess = true;
+            playSuccessSound();
+            confetti({ particleCount: 160, spread: 75, origin: { y: 0.6 }, colors: ['#0ea5e9', '#10b981', '#f59e0b', '#6366f1'] });
+
+            state.currentScore++;
+            savePlayerProfile();
+            updateRocketVisual();
+            speakText("Excelente! Todas as cinco palavras estão corretas!", 0.85);
+            announceAria("Parabéns! Todas as cinco palavras do quadro estão corretas.");
+
+            if (state.currentScore >= state.targetScore) {
+                document.getElementById('rocket-desktop').classList.add('animate-launch');
+                document.getElementById('rocket-mobile').classList.add('animate-launch');
+
+                setTimeout(() => {
+                    document.getElementById('victory-name').innerText = state.playerName;
+                    document.getElementById('victory-target').innerText = state.targetScore;
+                    document.getElementById('victory-screen').classList.remove('hidden');
+                    document.getElementById('victory-screen').classList.add('flex');
+                    speakText(`Parabéns ${state.playerName}! Você concluiu a meta!`, 0.9);
+                    confetti({ particleCount: 300, spread: 100, origin: { y: 0.3 } });
+                }, 1500);
+            } else {
+                startCountdown(5);
+            }
+            render();
+        }
+
+        function handleGridError() {
+            playErrorSound();
+            state.attemptsLeft--;
+            speakText("Algumas palavras precisam de ajuste. Observe as peças marcadas.", 0.85);
+            announceAria("Algumas palavras estão incorretas. As palavras certas foram fixadas.");
+
+            if (state.attemptsLeft <= 0) {
+                setTimeout(() => {
+                    state.rows.forEach(row => {
+                        row.isError = false;
+                        row.isLocked = true;
+                        row.slots = row.targetSyllables.map((text, i) => ({
+                            id: `correct-${row.word}-${i}`,
+                            text,
+                            playCount: AUDIO_LIMIT
+                        }));
+                    });
+                    state.bankSyllables = [];
+                    state.showAllCorrect = true;
+                    speakText("Veja a escrita correta de todas as palavras.", 0.85);
+                    render();
+                    startCountdown(6);
+                }, 1200);
+            } else {
+                setTimeout(() => {
+                    // Devolve ao banco apenas as sílabas das linhas que erraram
+                    state.rows.forEach(row => {
+                        if (!row.isLocked) {
+                            row.isError = false;
+                            const returnedPieces = row.slots.filter(s => s !== null);
+                            state.bankSyllables = [...state.bankSyllables, ...returnedPieces];
+                            row.slots.fill(null);
+                        }
+                    });
+                    const firstUnlocked = state.rows.findIndex(r => !r.isLocked);
+                    if (firstUnlocked !== -1) state.selectedRowIndex = firstUnlocked;
+                    state.isCooldown = false;
+                    render();
+                }, 2000);
+            }
+        }
+
+        function startCountdown(seconds) {
+            let left = seconds;
+            renderBankMessage(`Próximo quadro em ${left}s...`, state.isAllSuccess);
+            countdownInterval = setInterval(() => {
+                left--;
+                if (left > 0) {
+                    renderBankMessage(`Próximo quadro em ${left}s...`, state.isAllSuccess);
+                } else {
+                    clearInterval(countdownInterval);
+                    loadNewGrid();
+                }
+            }, 1000);
+        }
+
+        // --- RENDERIZAÇÃO DOM ---
+        function updateRocketVisual() {
+            document.getElementById('score-counter-mobile').innerText = state.currentScore;
+            const pct = Math.min((state.currentScore / state.targetScore) * 100, 100);
+            
+            const maxTranslateY = -360;
+            const translateY = (pct / 100) * maxTranslateY;
+            document.getElementById('rocket-desktop').style.transform = `translateY(${translateY}px)`;
+            
+            const maxTranslateX = window.innerWidth * 0.6;
+            const translateX = (pct / 100) * maxTranslateX;
+            document.getElementById('rocket-mobile').style.transform = `translateY(-50%) rotate(90deg) translateX(${translateX}px)`;
+        }
+
+        function renderBankMessage(msg, isWin) {
+            const color = isWin ? 'text-emerald-700' : 'text-sky-700';
+            const icon = isWin ? 'check' : 'lightbulb';
+            document.getElementById('bank-container').innerHTML = `
+                <div class="w-full flex flex-col items-center justify-center animate-pulse py-2 ${color}" role="status">
+                    <div class="flex items-center gap-2">
+                        <i data-lucide="${icon}" class="w-5 h-5"></i>
+                        <p class="font-bold text-sm sm:text-base">${isWin ? 'Quadro completo!' : 'Observe a correção:'} ${msg}</p>
+                    </div>
+                </div>
+            `;
+            lucide.createIcons();
+        }
+
+        function render() {
+            // Corações
+            document.getElementById('hearts-container').innerHTML = [1, 2, 3].map(heart => `
+                <i data-lucide="heart" aria-hidden="true" class="w-4 h-4 sm:w-5 sm:h-5 transition-colors ${heart <= state.attemptsLeft ? 'text-red-500 fill-red-500' : 'text-gray-200 fill-gray-200'}"></i>
+            `).join('');
+
+            // Grade das 5 linhas
+            const gridHtml = state.rows.map((row, rIdx) => {
+                const isSelected = (rIdx === state.selectedRowIndex) && !row.isLocked && !state.isAllSuccess && !state.showAllCorrect;
+                let rowBorder = 'border-gray-100 bg-gray-50/40';
+                if (row.isLocked) rowBorder = 'border-emerald-200 bg-emerald-50/50';
+                else if (row.isError) rowBorder = 'border-red-300 bg-red-50/60 animate-shake';
+                else if (isSelected) rowBorder = 'border-sky-300 bg-sky-50/50 shadow-sm';
+
+                const slotsHtml = row.slots.map((piece, sIdx) => {
+                    if (piece) {
+                        let pieceBg = 'bg-indigo-500 border-transparent shadow-sm';
+                        if (row.isLocked || state.isAllSuccess || state.showAllCorrect) {
+                            pieceBg = 'bg-emerald-500 border-transparent shadow-sm';
+                        } else if (row.isError) {
+                            pieceBg = 'bg-red-500 border-transparent shadow-sm';
+                        }
+
+                        const playCount = piece.playCount || 0;
+                        const dots = Array.from({length: AUDIO_LIMIT}).map((_, i) => `<div class="audio-dot w-1 h-1 rounded-full ${i < (AUDIO_LIMIT - playCount) ? 'bg-white/80' : 'bg-black/15'}"></div>`).join('');
+
+                        return `
+                            <div class="slot relative h-9 sm:h-11 min-w-[2.8rem] sm:min-w-[3.6rem] px-2 rounded-lg border-2 flex items-center justify-center transition-all select-none ${row.isLocked ? 'cursor-default' : 'cursor-pointer'} ${pieceBg}" data-row="${rIdx}" data-slot="${sIdx}" tabindex="0" role="button" aria-label="Linha ${rIdx + 1}, sílaba ${piece.text}">
+                                <span class="slot-piece text-base sm:text-xl font-extrabold text-white lowercase" draggable="${(!row.isLocked && !state.isCooldown) ? 'true' : 'false'}">${piece.text}</span>
+                                <div class="absolute bottom-0.5 left-1/2 -translate-x-1/2 flex gap-0.5 pointer-events-none" aria-hidden="true">${dots}</div>
+                            </div>
+                        `;
+                    } else {
+                        return `
+                            <div class="slot h-9 sm:h-11 min-w-[2.8rem] sm:min-w-[3.6rem] rounded-lg border-2 border-dashed ${isSelected ? 'border-sky-400 bg-white' : 'border-gray-300 bg-white/70'} transition-all" data-row="${rIdx}" data-slot="${sIdx}" tabindex="0" role="button" aria-label="Linha ${rIdx + 1}, espaço vazio ${sIdx + 1}"></div>
+                        `;
+                    }
+                }).join('');
+
+                return `
+                    <div onclick="selectRow(${rIdx})" class="w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl border-2 transition-all cursor-pointer ${rowBorder}">
+                        <!-- Coluna 1: Imagem e Áudio -->
+                        <div class="flex items-center gap-2 shrink-0 pr-2 border-r border-gray-200/80">
+                            <span class="text-2xl sm:text-3xl select-none" aria-hidden="true">${row.emoji}</span>
+                            <button onclick="event.stopPropagation(); speakRowWord(${rIdx})" class="p-1.5 rounded-lg bg-white hover:bg-sky-100 text-sky-600 border border-gray-200 shadow-xs transition-colors active:scale-90" title="Ouvir Palavra" aria-label="Ouvir palavra da linha ${rIdx + 1}">
+                                <i data-lucide="volume-2" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+
+                        <!-- Colunas Seguintes: Slots de Sílabas -->
+                        <div class="flex-grow flex flex-wrap items-center justify-start sm:justify-center gap-1.5 sm:gap-2 pl-2">
+                            ${slotsHtml}
+                        </div>
+
+                        <!-- Indicador de Status da Linha -->
+                        <div class="w-6 flex justify-center shrink-0">
+                            ${row.isLocked ? '<i data-lucide="check-circle-2" class="w-5 h-5 text-emerald-500"></i>' : (isSelected ? '<i data-lucide="arrow-left" class="w-4 h-4 text-sky-500 animate-pulse"></i>' : '')}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            document.getElementById('grid-container').innerHTML = gridHtml;
+
+            // Botão Conferir
+            const btn = document.getElementById('check-btn');
+            const isGridFull = state.rows.every(r => r.slots.every(s => s !== null));
+            if (isGridFull && !state.isCooldown && !state.isAllSuccess && !state.showAllCorrect) {
+                btn.disabled = false;
+                btn.className = "px-6 sm:px-8 py-2 rounded-xl font-bold text-sm sm:text-base text-white shadow-md transition-all flex items-center gap-2 bg-sky-600 hover:bg-sky-700 active:scale-95 shadow-sky-200";
+            } else {
+                btn.disabled = true;
+                btn.className = "px-6 sm:px-8 py-2 rounded-xl font-bold text-sm sm:text-base text-white shadow-md transition-all flex items-center gap-2 bg-gray-300 cursor-not-allowed shadow-none text-gray-100";
+            }
+
+            // Banco Inferior de Sílabas
+            if (!state.isAllSuccess && !state.showAllCorrect) {
+                const bankHtml = state.bankSyllables.map(piece => {
+                    const playCount = piece.playCount || 0;
+                    const dots = Array.from({length: AUDIO_LIMIT}).map((_, i) => `<div class="audio-dot w-1 h-1 rounded-full ${i < (AUDIO_LIMIT - playCount) ? 'bg-sky-500' : 'bg-gray-200'}"></div>`).join('');
+                    return `
+                        <div class="bank-piece relative h-9 sm:h-11 px-3 sm:px-4 bg-white border-2 border-sky-200 shadow-xs rounded-xl flex items-center justify-center transition-all select-none ${state.isCooldown ? 'opacity-60 cursor-not-allowed' : 'cursor-grab active:cursor-grabbing hover:border-sky-400 hover:shadow-sm hover:-translate-y-0.5'}" data-id="${piece.id}" draggable="${!state.isCooldown ? 'true' : 'false'}" tabindex="0" role="button" aria-label="Sílaba disponível: ${piece.text}">
+                            <span class="text-base sm:text-xl font-bold text-sky-700 lowercase pointer-events-none">${piece.text}</span>
+                            <div class="absolute bottom-0.5 left-1/2 -translate-x-1/2 flex gap-0.5 pointer-events-none" aria-hidden="true">${dots}</div>
+                        </div>
+                    `;
+                }).join('');
+                document.getElementById('bank-container').innerHTML = bankHtml;
+            }
+
+            lucide.createIcons();
+            attachDragEvents();
+        }
+
+        function handleKeydown(e, callback) {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                callback();
+            }
+        }
+
+        // --- ARRASTAR E SOLTAR ---
+        function attachDragEvents() {
+            document.querySelectorAll('.slot').forEach(slot => {
+                const rIdx = parseInt(slot.dataset.row);
+                const sIdx = parseInt(slot.dataset.slot);
+
+                const action = (e) => {
+                    e.stopPropagation();
+                    if (state.rows[rIdx].slots[sIdx]) {
+                        moveSlotToBank(rIdx, sIdx);
+                    } else {
+                        selectRow(rIdx);
+                    }
+                };
+                slot.onclick = action;
+                slot.onkeydown = (e) => handleKeydown(e, () => action(e));
+                
+                slot.ondragover = e => e.preventDefault();
+                slot.ondrop = (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const targetRow = state.rows[rIdx];
+                    if (targetRow.isLocked || targetRow.slots[sIdx] !== null || state.isAllSuccess || state.isCooldown) return;
+                    
+                    if (dragSource === 'bank') {
+                        moveBankToSlot(draggedPiece, rIdx, sIdx);
+                    } else if (dragSource && dragSource.type === 'slot') {
+                        const srcRow = state.rows[dragSource.row];
+                        if (!srcRow.isLocked) {
+                            targetRow.slots[sIdx] = srcRow.slots[dragSource.slot];
+                            srcRow.slots[dragSource.slot] = null;
+                            state.selectedRowIndex = rIdx;
+                            render();
+                        }
+                    }
+                    draggedPiece = null;
+                    dragSource = null;
+                };
+            });
+
+            document.querySelectorAll('.slot-piece').forEach(pieceEl => {
+                pieceEl.ondragstart = (e) => {
+                    const slotDiv = pieceEl.parentElement;
+                    const rIdx = parseInt(slotDiv.dataset.row);
+                    const sIdx = parseInt(slotDiv.dataset.slot);
+                    if (state.rows[rIdx].isLocked || state.isCooldown || state.isAllSuccess || state.showAllCorrect) {
+                        e.preventDefault();
+                        return;
+                    }
+                    draggedPiece = state.rows[rIdx].slots[sIdx];
+                    dragSource = { type: 'slot', row: rIdx, slot: sIdx };
+                    handlePieceInteract(draggedPiece, pieceEl);
+                };
+            });
+
+            const bank = document.getElementById('bank-container');
+            bank.ondragover = e => e.preventDefault();
+            bank.ondrop = (e) => {
+                e.preventDefault();
+                if (dragSource && dragSource.type === 'slot') {
+                    moveSlotToBank(dragSource.row, dragSource.slot);
+                }
+                draggedPiece = null;
+                dragSource = null;
+            };
+
+            document.querySelectorAll('.bank-piece').forEach(pieceEl => {
+                const action = () => {
+                    const id = pieceEl.dataset.id;
+                    const piece = state.bankSyllables.find(p => p.id === id);
+                    if (piece) moveBankToSlot(piece);
+                };
+                pieceEl.onclick = action;
+                pieceEl.onkeydown = (e) => handleKeydown(e, action);
+                
+                pieceEl.ondragstart = (e) => {
+                    if (state.isCooldown) { e.preventDefault(); return; }
+                    const id = pieceEl.dataset.id;
+                    draggedPiece = state.bankSyllables.find(p => p.id === id);
+                    dragSource = 'bank';
+                    handlePieceInteract(draggedPiece, pieceEl);
+                };
+            });
+        }
+
+        // --- TELA CHEIA ---
+        function toggleFullscreen() {
+            const doc = window.document;
+            const docEl = doc.documentElement;
+            const requestFullScreen = docEl.requestFullscreen || docEl.mozRequestFullScreen || docEl.webkitRequestFullScreen || docEl.msRequestFullscreen;
+            const cancelFullScreen = doc.exitFullscreen || doc.mozCancelFullScreen || doc.webkitExitFullscreen || doc.msExitFullscreen;
+
+            if (!doc.fullscreenElement && !doc.mozFullScreenElement && !doc.webkitFullscreenElement && !doc.msFullscreenElement) {
+                if (requestFullScreen) {
+                    try {
+                        const promise = requestFullScreen.call(docEl);
+                        if (promise && typeof promise.catch === 'function') {
+                            promise.catch(() => alert("Pressione F11 no teclado para alternar a tela cheia."));
+                        }
+                    } catch (e) {}
+                }
+            } else {
+                if (cancelFullScreen) cancelFullScreen.call(doc);
+            }
+        }
+    </script>
+</body>
+</html>
