@@ -45,9 +45,9 @@
         </div>
 
         <!-- Identificação do Usuário Persistente -->
-        <div class="flex items-center gap-2 bg-white px-4 py-2 rounded-2xl border-2 border-gray-200 shadow-sm w-full sm:w-auto">
+        <div class="flex items-center gap-2 bg-white px-4 py-2 rounded-2xl border-2 border-gray-200 shadow-sm w-full sm:w-auto transition-all">
             <i data-lucide="user" class="w-5 h-5 text-indigo-500 shrink-0"></i>
-            <input type="text" id="global-player-name" placeholder="Digite seu nome..." aria-label="Nome do jogador" class="bg-transparent font-bold text-gray-700 outline-none w-full sm:w-44 text-sm sm:text-base" oninput="savePlayerName()">
+            <input type="text" id="global-player-name" placeholder="Digite seu nome..." aria-label="Nome do jogador" class="bg-transparent font-bold text-gray-700 outline-none w-full sm:w-44 text-sm sm:text-base" oninput="savePlayerProfile()">
         </div>
     </header>
 
@@ -60,22 +60,34 @@
 
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
             
-            <!-- MÓDULO 1: FORMAÇÃO DE SÍLABAS (ATIVO) -->
-            <a href="silabas.html" onclick="validateNavigation(event, 'silabas.html')" class="group bg-white rounded-[2rem] p-6 border-4 border-orange-200 hover:border-orange-400 shadow-xl shadow-orange-100/50 transition-all hover:-translate-y-1.5 flex flex-col items-center text-center relative overflow-hidden">
+            <!-- MÓDULO 1: FORMAÇÃO DE SÍLABAS (COM SELETOR DE META) -->
+            <div class="group bg-white rounded-[2rem] p-6 border-4 border-orange-200 hover:border-orange-400 shadow-xl shadow-orange-100/50 transition-all hover:-translate-y-1.5 flex flex-col items-center text-center relative overflow-hidden">
                 <div class="absolute top-4 right-4 bg-green-100 text-green-700 text-xs font-extrabold px-3 py-1 rounded-full">
                     Disponível
                 </div>
-                <div class="w-24 h-24 bg-orange-100 rounded-3xl flex items-center justify-center text-5xl mb-5 group-hover:scale-110 transition-transform animate-float" aria-hidden="true">
+                <div class="w-24 h-24 bg-orange-100 rounded-3xl flex items-center justify-center text-5xl mb-4 group-hover:scale-110 transition-transform animate-float" aria-hidden="true">
                     🧩
                 </div>
                 <h3 class="text-xl font-extrabold text-gray-800 mb-2">Montar Palavras</h3>
-                <p class="text-gray-500 text-sm font-medium mb-6 flex-grow">
+                <p class="text-gray-500 text-sm font-medium mb-4 flex-grow">
                     Organize as sílabas embaralhadas para formar o nome correspondente à figura exibida.
                 </p>
-                <div class="w-full bg-orange-500 group-hover:bg-orange-600 text-white font-extrabold py-3 rounded-xl shadow-md shadow-orange-200 transition-colors flex items-center justify-center gap-2">
-                    Praticar <i data-lucide="arrow-right" class="w-5 h-5"></i>
+
+                <!-- Seletor de Meta do Foguete -->
+                <div class="w-full mb-4">
+                    <label for="silabas-target-select" class="block text-[11px] font-extrabold text-gray-400 mb-1 uppercase tracking-wider">Meta de Acertos (Foguete)</label>
+                    <select id="silabas-target-select" onchange="savePlayerProfile()" class="w-full bg-orange-50/60 border-2 border-orange-200 rounded-xl px-3 py-2 text-sm font-extrabold text-center text-orange-700 focus:border-orange-400 outline-none transition-all cursor-pointer">
+                        <option value="5">5 Acertos</option>
+                        <option value="10">10 Acertos</option>
+                        <option value="15">15 Acertos</option>
+                        <option value="20">20 Acertos</option>
+                    </select>
                 </div>
-            </a>
+
+                <a href="silabas.html" onclick="validateNavigation(event, 'silabas.html')" class="w-full bg-orange-500 hover:bg-orange-600 text-white font-extrabold py-3 rounded-xl shadow-md shadow-orange-200 transition-colors flex items-center justify-center gap-2">
+                    Praticar <i data-lucide="arrow-right" class="w-5 h-5"></i>
+                </a>
+            </div>
 
             <!-- MÓDULO 2: IDENTIFICAÇÃO DE LETRA INICIAL -->
             <a href="letra-inicial.html" onclick="validateNavigation(event, 'letra-inicial.html')" class="group bg-white rounded-[2rem] p-6 border-4 border-indigo-200 hover:border-indigo-400 shadow-xl shadow-indigo-100/50 transition-all hover:-translate-y-1.5 flex flex-col items-center text-center relative overflow-hidden">
@@ -124,7 +136,7 @@
 
         const STORAGE_KEY = 'silabando_state';
 
-        // Carrega o nome salvo anteriormente no localStorage
+        // Carrega o nome e a meta salvos anteriormente no localStorage
         function loadPlayerProfile() {
             try {
                 const saved = localStorage.getItem(STORAGE_KEY);
@@ -133,19 +145,24 @@
                     if (data.name) {
                         document.getElementById('global-player-name').value = data.name;
                     }
+                    if (data.silabasTarget) {
+                        document.getElementById('silabas-target-select').value = data.silabasTarget;
+                    }
                 }
             } catch (e) {
                 console.error("Erro ao acessar o armazenamento local.", e);
             }
         }
 
-        // Salva o nome digitado em tempo real para compartilhamento entre páginas
-        function savePlayerName() {
+        // Salva o nome e a meta escolhida para compartilhamento entre páginas
+        function savePlayerProfile() {
             const nameInput = document.getElementById('global-player-name').value.trim();
+            const targetSelect = parseInt(document.getElementById('silabas-target-select').value);
             try {
                 const saved = localStorage.getItem(STORAGE_KEY);
-                const data = saved ? JSON.parse(saved) : { score: 0, target: 5 };
+                const data = saved ? JSON.parse(saved) : { silabasScore: 0 };
                 data.name = nameInput;
+                data.silabasTarget = targetSelect;
                 localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
             } catch (e) {
                 console.error("Erro ao gravar no armazenamento local.", e);
@@ -163,7 +180,7 @@
                     nameInput.parentElement.classList.remove('border-red-400', 'ring-4', 'ring-red-100');
                 }, 1500);
             } else {
-                savePlayerName();
+                savePlayerProfile();
             }
         }
 
