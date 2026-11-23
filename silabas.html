@@ -65,37 +65,6 @@
     <!-- ARIA Live Region para Leitores de Tela -->
     <div id="aria-announcer" aria-live="polite" class="sr-only"></div>
 
-    <!-- TELA INICIAL DO MÓDULO (Configuração da Meta) -->
-    <div id="welcome-screen" class="absolute inset-0 z-50 flex items-center justify-center p-4 bg-[#FDFBF7]/95 backdrop-blur-sm">
-        <div class="bg-white p-6 sm:p-8 rounded-[2rem] shadow-2xl shadow-orange-100 border-4 border-orange-200 max-w-md w-full text-center flex flex-col items-center relative">
-            
-            <!-- Botão Voltar ao Menu -->
-            <a href="index.html" class="absolute top-4 left-4 w-10 h-10 flex items-center justify-center bg-gray-100 hover:bg-orange-100 text-gray-600 hover:text-orange-600 rounded-xl transition-colors" title="Voltar ao Menu Inicial" aria-label="Voltar ao Menu Inicial">
-                <i data-lucide="arrow-left" class="w-5 h-5"></i>
-            </a>
-
-            <div class="w-20 h-20 bg-orange-100 rounded-full flex items-center justify-center mb-4 text-4xl shadow-inner mt-2" aria-hidden="true">
-                🧩
-            </div>
-            <h1 class="text-3xl font-extrabold text-gray-800 mb-2">Olá, <span id="welcome-player-name" class="text-orange-500">Jogador</span>!</h1>
-            <p class="text-gray-500 font-medium mb-6">Escolha a meta de acertos para o seu foguete decolar.</p>
-            
-            <div class="w-full mb-6">
-                <label for="target-score-input" class="block text-sm font-bold text-gray-400 mb-2 uppercase tracking-wider">Meta de Acertos (Foguete)</label>
-                <select id="target-score-input" class="w-full bg-gray-50 border-2 border-gray-200 rounded-xl px-4 py-3 text-lg font-bold text-center focus:border-orange-400 focus:ring-4 focus:ring-orange-100 outline-none transition-all cursor-pointer text-gray-700 appearance-none">
-                    <option value="5">5 Acertos</option>
-                    <option value="10">10 Acertos</option>
-                    <option value="15">15 Acertos</option>
-                    <option value="20">20 Acertos</option>
-                </select>
-            </div>
-
-            <button onclick="startGame()" class="w-full bg-orange-500 hover:bg-orange-600 text-white rounded-xl py-3 text-xl font-extrabold shadow-lg shadow-orange-200 active:scale-95 transition-all flex items-center justify-center gap-2 focus:ring-4 focus:ring-orange-200">
-                Começar Missão <i data-lucide="play" class="w-6 h-6"></i>
-            </button>
-        </div>
-    </div>
-
     <!-- TELA DE VITÓRIA (Prêmio) -->
     <div id="victory-screen" class="absolute inset-0 z-50 hidden flex-col items-center justify-center p-4 bg-[#FDFBF7]/95 backdrop-blur-sm">
         <div class="bg-green-50 p-6 sm:p-10 rounded-[2rem] shadow-2xl shadow-green-200 border-4 border-green-400 max-w-lg w-full text-center flex flex-col items-center relative overflow-hidden">
@@ -123,7 +92,7 @@
     </div>
 
     <!-- JOGO PRINCIPAL -->
-    <div id="game-container" class="hidden h-full w-full flex flex-col">
+    <div id="game-container" class="h-full w-full flex flex-col">
         <!-- HEADER -->
         <header class="w-full max-w-6xl mx-auto px-4 pt-2 pb-1 flex justify-between items-center shrink-0">
             <!-- Botão Voltar ao Menu -->
@@ -320,32 +289,42 @@
             shakeError: false
         };
 
-        // --- PERSISTÊNCIA UNIFICADA COM INDEX.HTML ---
-        function loadPlayerProfile() {
+        // --- INICIALIZAÇÃO DIRETA VIA LOCALSTORAGE ---
+        function initGame() {
             try {
                 const saved = localStorage.getItem(STORAGE_KEY);
-                if (saved) {
-                    const data = JSON.parse(saved);
-                    if (data.name && data.name.trim() !== '') {
-                        state.playerName = data.name.trim();
-                        document.getElementById('welcome-player-name').innerText = state.playerName;
-                        document.getElementById('header-player-name').innerText = state.playerName;
-                        document.getElementById('player-name-display').innerText = state.playerName;
-                    } else {
-                        window.location.href = 'index.html';
-                        return;
-                    }
-                    if (data.silabasTarget) {
-                        document.getElementById('target-score-input').value = data.silabasTarget;
-                    }
-                    if (typeof data.silabasScore === 'number') {
-                        state.currentScore = data.silabasScore;
-                    }
-                } else {
+                if (!saved) {
                     window.location.href = 'index.html';
+                    return;
                 }
+
+                const data = JSON.parse(saved);
+                if (!data.name || data.name.trim() === '') {
+                    window.location.href = 'index.html';
+                    return;
+                }
+
+                state.playerName = data.name.trim();
+                state.targetScore = parseInt(data.silabasTarget) || 5;
+                state.currentScore = typeof data.silabasScore === 'number' ? data.silabasScore : 0;
+
+                if (state.currentScore >= state.targetScore) {
+                    state.currentScore = 0;
+                }
+
+                document.getElementById('header-player-name').innerText = state.playerName;
+                document.getElementById('player-name-display').innerText = state.playerName;
+                document.getElementById('rocket-target-desktop').innerText = state.targetScore;
+                document.getElementById('rocket-target-mobile').innerText = state.targetScore;
+
+                savePlayerProfile();
+                updateRocketVisual();
+                loadRandomWord();
+                renderIdeas();
+                announceAria(`Atividade iniciada para ${state.playerName}. Meta de ${state.targetScore} acertos.`);
             } catch (e) {
-                console.error("Erro ao ler perfil do localStorage.", e);
+                console.error("Erro ao inicializar o jogo.", e);
+                window.location.href = 'index.html';
             }
         }
 
@@ -362,7 +341,7 @@
             }
         }
 
-        window.onload = loadPlayerProfile;
+        window.onload = initGame;
 
         function announceAria(text) {
             const announcer = document.getElementById('aria-announcer');
@@ -424,26 +403,6 @@
         const speakCurrentWord = () => speakText(state.currentWord, 0.7);
 
         // --- LÓGICA DO JOGO ---
-        function startGame() {
-            state.targetScore = parseInt(document.getElementById('target-score-input').value);
-            if (state.currentScore >= state.targetScore) {
-                state.currentScore = 0;
-            }
-            savePlayerProfile();
-            
-            document.getElementById('welcome-screen').classList.add('hidden');
-            document.getElementById('game-container').classList.remove('hidden');
-            document.getElementById('rocket-target-desktop').innerText = state.targetScore;
-            document.getElementById('rocket-target-mobile').innerText = state.targetScore;
-            
-            speakText(`Oi ${state.playerName}! Vamos começar.`, 0.9);
-            announceAria("Atividade iniciada.");
-            
-            updateRocketVisual();
-            loadRandomWord();
-            renderIdeas();
-        }
-
         function resetGame() {
             state.currentScore = 0;
             savePlayerProfile();
