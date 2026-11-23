@@ -203,6 +203,7 @@
         const DEFAULT_TARGET = 5;
         const AUDIO_LIMIT = 3;
         let countdownInterval;
+        let lastMoveTimestamp = 0; // Trava contra cliques/toques duplos acidentais
 
         // --- BANCO DE FRASES E CENAS ---
         const SENTENCES_DB = [
@@ -371,13 +372,13 @@
             state.currentItem = nextItem;
             state.targetWords = [...nextItem.words];
 
+            const baseTime = Date.now();
             let pieces = nextItem.words.map((text, i) => ({
-                id: `word-${i}-${Date.now()}`,
+                id: `word-${i}-${baseTime}-${Math.random().toString(36).substring(2, 6)}`,
                 text,
                 playCount: 0
             }));
 
-            // Adiciona 1 ou 2 palavras distratoras do banco da cena
             const availableDistractors = [...nextItem.distractors];
             const numDistractors = availableDistractors.length > 1 && Math.random() > 0.4 ? 2 : 1;
             for (let i = 0; i < numDistractors; i++) {
@@ -385,7 +386,7 @@
                     const randIndex = Math.floor(Math.random() * availableDistractors.length);
                     const dist = availableDistractors.splice(randIndex, 1)[0];
                     pieces.push({
-                        id: `dist-${i}-${Date.now()}`,
+                        id: `dist-${i}-${baseTime}-${Math.random().toString(36).substring(2, 6)}`,
                         text: dist,
                         playCount: 0
                     });
@@ -410,7 +411,6 @@
                 
                 if (piece.playCount < AUDIO_LIMIT) {
                     piece.playCount++;
-                    // Remove pontuação final isolada para leitura natural da palavra
                     const cleanForSpeech = piece.text.replace(/[.!?]/g, '');
                     speakText(cleanForSpeech, 0.8);
                     
@@ -434,28 +434,52 @@
         let dragSource = null;
 
         function moveBankToSlot(piece, targetIndex = null) {
-            if (state.isSuccess || state.isCooldown || state.showCorrect) return;
+            if (!piece || state.isSuccess || state.isCooldown || state.showCorrect) return;
+            
+            // Bloqueio contra disparos duplos simultâneos (toque + clique)
+            const now = Date.now();
+            if (now - lastMoveTimestamp < 250) return;
+            lastMoveTimestamp = now;
+
+            // Garante que a peça ainda existe no banco e não foi alocada
+            const bankIndex = state.bankWords.findIndex(p => p.id === piece.id);
+            if (bankIndex === -1) return;
+            if (state.slots.some(s => s && s.id === piece.id)) return;
+
             handlePieceInteract(piece, document.querySelector(`[data-id="${piece.id}"]`));
             
-            state.bankWords = state.bankWords.filter(p => p.id !== piece.id);
+            // Remove estritamente a peça do banco
+            state.bankWords.splice(bankIndex, 1);
+
             if (targetIndex !== null && state.slots[targetIndex] === null) {
                 state.slots[targetIndex] = piece;
             } else {
                 const firstEmpty = state.slots.findIndex(s => s === null);
-                if (firstEmpty !== -1) state.slots[firstEmpty] = piece;
-                else state.bankWords.push(piece);
+                if (firstEmpty !== -1) {
+                    state.slots[firstEmpty] = piece;
+                } else {
+                    state.bankWords.push(piece);
+                }
             }
             render();
         }
 
         function moveSlotToBank(index) {
             if (state.isSuccess || state.isCooldown || state.showCorrect) return;
+            
+            const now = Date.now();
+            if (now - lastMoveTimestamp < 250) return;
+            lastMoveTimestamp = now;
+
             const piece = state.slots[index];
             if (!piece) return;
+
             handlePieceInteract(piece, document.querySelector(`.slot[data-index="${index}"]`));
             
             state.slots[index] = null;
-            state.bankWords.push(piece);
+            if (!state.bankWords.some(p => p.id === piece.id)) {
+                state.bankWords.push(piece);
+            }
             render();
         }
 
@@ -599,7 +623,6 @@
 
             document.getElementById('scene-display').innerText = state.currentItem.scene;
 
-            // Slots para as palavras da frase
             const slotsHtml = state.slots.map((piece, index) => {
                 if (piece) {
                     const bgClass = (state.isSuccess || state.showCorrect) ? 'bg-emerald-500 shadow-emerald-200 border-transparent' : 'bg-indigo-500 shadow-indigo-200 border-transparent scale-100';
@@ -619,7 +642,6 @@
             }).join('');
             document.getElementById('slots-container').innerHTML = slotsHtml;
 
-            // Botão Conferir
             const btn = document.getElementById('check-btn');
             const isFull = state.slots.every(s => s !== null) && state.slots.length > 0;
             if (isFull && !state.isCooldown && !state.isSuccess && !state.showCorrect) {
@@ -630,7 +652,6 @@
                 btn.className = "px-6 sm:px-8 py-2 sm:py-2.5 rounded-xl font-bold text-base sm:text-lg text-white shadow-md transition-all flex items-center gap-2 bg-gray-300 cursor-not-allowed shadow-none text-gray-100";
             }
 
-            // Banco de palavras
             if (!state.isSuccess && !state.showCorrect) {
                 let bankHtml = '';
                 if (state.bankWords.length === 0) {
@@ -668,40 +689,47 @@
                     const index = parseInt(slot.dataset.index);
                     if (state.slots[index]) moveSlotToBank(index);
                 };
-                slot.addEventListener('click', action);
-                slot.addEventListener('keydown', (e) => handleKeydown(e, action));
+                slot.onclick = action;
+                slot.onkeydown = (e) => handleKeydown(e, action);
                 
-                slot.addEventListener('dragover', e => e.preventDefault());
-                slot.addEventListener('drop', (e) => {
+                slot.ondragover = e => e.preventDefault();
+                slot.ondrop = (e) => {
                     e.preventDefault();
                     const index = parseInt(slot.dataset.index);
                     if (state.slots[index] !== null || state.isSuccess || state.isCooldown) return;
-                    if (dragSource === 'bank') moveBankToSlot(draggedPiece, index);
-                    else if (dragSource && dragSource.type === 'slot') {
+                    if (dragSource === 'bank') {
+                        moveBankToSlot(draggedPiece, index);
+                    } else if (dragSource && dragSource.type === 'slot') {
                         state.slots[index] = state.slots[dragSource.index];
                         state.slots[dragSource.index] = null;
                         render();
                     }
-                });
+                    draggedPiece = null;
+                    dragSource = null;
+                };
             });
 
             document.querySelectorAll('.slot-piece').forEach(pieceEl => {
-                pieceEl.addEventListener('dragstart', (e) => {
+                pieceEl.ondragstart = (e) => {
                     if (state.isCooldown || state.isSuccess || state.showCorrect) { e.preventDefault(); return; }
                     const slotDiv = pieceEl.parentElement;
                     const index = parseInt(slotDiv.dataset.index);
                     draggedPiece = state.slots[index];
                     dragSource = { type: 'slot', index };
                     handlePieceInteract(draggedPiece, pieceEl);
-                });
+                };
             });
 
             const bank = document.getElementById('bank-container');
-            bank.addEventListener('dragover', e => e.preventDefault());
-            bank.addEventListener('drop', (e) => {
+            bank.ondragover = e => e.preventDefault();
+            bank.ondrop = (e) => {
                 e.preventDefault();
-                if (dragSource && dragSource.type === 'slot') moveSlotToBank(dragSource.index);
-            });
+                if (dragSource && dragSource.type === 'slot') {
+                    moveSlotToBank(dragSource.index);
+                }
+                draggedPiece = null;
+                dragSource = null;
+            };
 
             document.querySelectorAll('.bank-piece').forEach(pieceEl => {
                 const action = () => {
@@ -709,16 +737,16 @@
                     const piece = state.bankWords.find(p => p.id === id);
                     if (piece) moveBankToSlot(piece);
                 };
-                pieceEl.addEventListener('click', action);
-                pieceEl.addEventListener('keydown', (e) => handleKeydown(e, action));
+                pieceEl.onclick = action;
+                pieceEl.onkeydown = (e) => handleKeydown(e, action);
                 
-                pieceEl.addEventListener('dragstart', (e) => {
+                pieceEl.ondragstart = (e) => {
                     if (state.isCooldown) { e.preventDefault(); return; }
                     const id = pieceEl.dataset.id;
                     draggedPiece = state.bankWords.find(p => p.id === id);
                     dragSource = 'bank';
                     handlePieceInteract(draggedPiece, pieceEl);
-                });
+                };
             });
         }
 
