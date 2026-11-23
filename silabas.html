@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Silabando - Alfabetização Divertida</title>
+    <title>Silabando - Montar Palavras</title>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -14,6 +14,9 @@
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
 
+    <!-- Polyfill para suporte a Drag and Drop em dispositivos móveis (Touch) -->
+    <script src="https://bernardo-castilho.github.io/DragDropTouch/DragDropTouch.js"></script>
+
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
 
@@ -23,8 +26,8 @@
             background-color: #FDFBF7;
             background-image: radial-gradient(#d1d5db 2px, transparent 2px);
             background-size: 24px 24px;
-            overflow: hidden; /* Remove barras de rolagem */
-            touch-action: manipulation; /* Melhora o toque no celular */
+            overflow: hidden;
+            touch-action: manipulation;
         }
         
         .hide-scrollbar::-webkit-scrollbar { display: none; }
@@ -52,27 +55,35 @@
         }
         .animate-launch { animation: rocket-launch 2s ease-in forwards; }
 
-        /* Estilização para as peças e os slots no arrastar */
         .slot-piece, .bank-piece {
-            touch-action: none; /* Previne scroll ao arrastar no mobile */
+            touch-action: none;
         }
     </style>
 </head>
 <body class="h-[100dvh] w-full flex flex-col text-gray-800 selection:bg-orange-200">
 
-    <!-- TELA INICIAL (Boas-vindas) -->
+    <!-- ARIA Live Region para Leitores de Tela -->
+    <div id="aria-announcer" aria-live="polite" class="sr-only"></div>
+
+    <!-- TELA INICIAL DO MÓDULO (Configuração da Missão) -->
     <div id="welcome-screen" class="absolute inset-0 z-50 flex items-center justify-center p-4 bg-[#FDFBF7]/95 backdrop-blur-sm">
-        <div class="bg-white p-6 sm:p-8 rounded-[2rem] shadow-2xl shadow-orange-100 border-4 border-orange-200 max-w-md w-full text-center flex flex-col items-center">
-            <div class="w-20 h-20 bg-orange-100 rounded-full flex items-center justify-center mb-4 text-4xl shadow-inner">
-                🚀
-            </div>
-            <h1 class="text-3xl font-extrabold text-gray-800 mb-2">Bem-vindo(a)!</h1>
-            <p class="text-gray-500 font-medium mb-6">Qual é o seu nome para começarmos a aventura?</p>
+        <div class="bg-white p-6 sm:p-8 rounded-[2rem] shadow-2xl shadow-orange-100 border-4 border-orange-200 max-w-md w-full text-center flex flex-col items-center relative">
             
-            <input type="text" id="player-name-input" placeholder="Digite seu nome..." class="w-full bg-gray-50 border-2 border-gray-200 rounded-xl px-4 py-3 text-lg font-bold text-center focus:border-orange-400 focus:ring-4 focus:ring-orange-100 outline-none transition-all mb-4">
+            <!-- Botão Voltar ao Menu -->
+            <a href="index.html" class="absolute top-4 left-4 w-10 h-10 flex items-center justify-center bg-gray-100 hover:bg-orange-100 text-gray-600 hover:text-orange-600 rounded-xl transition-colors" title="Voltar ao Menu Inicial" aria-label="Voltar ao Menu Inicial">
+                <i data-lucide="arrow-left" class="w-5 h-5"></i>
+            </a>
+
+            <div class="w-20 h-20 bg-orange-100 rounded-full flex items-center justify-center mb-4 text-4xl shadow-inner mt-2" aria-hidden="true">
+                🧩
+            </div>
+            <h1 class="text-3xl font-extrabold text-gray-800 mb-2">Montar Palavras</h1>
+            <p class="text-gray-500 font-medium mb-6">Confirme seu nome e escolha a meta do foguete!</p>
+            
+            <input type="text" id="player-name-input" placeholder="Digite seu nome..." aria-label="Nome do jogador" class="w-full bg-gray-50 border-2 border-gray-200 rounded-xl px-4 py-3 text-lg font-bold text-center focus:border-orange-400 focus:ring-4 focus:ring-orange-100 outline-none transition-all mb-4">
             
             <div class="w-full mb-6">
-                <label class="block text-sm font-bold text-gray-400 mb-2 uppercase tracking-wider">Meta de Acertos (Foguete)</label>
+                <label for="target-score-input" class="block text-sm font-bold text-gray-400 mb-2 uppercase tracking-wider">Meta de Acertos (Foguete)</label>
                 <select id="target-score-input" class="w-full bg-gray-50 border-2 border-gray-200 rounded-xl px-4 py-3 text-lg font-bold text-center focus:border-orange-400 focus:ring-4 focus:ring-orange-100 outline-none transition-all cursor-pointer text-gray-700 appearance-none">
                     <option value="5">5 Acertos</option>
                     <option value="10">10 Acertos</option>
@@ -81,7 +92,7 @@
                 </select>
             </div>
 
-            <button onclick="startGame()" class="w-full bg-orange-500 hover:bg-orange-600 text-white rounded-xl py-3 text-xl font-extrabold shadow-lg shadow-orange-200 active:scale-95 transition-all flex items-center justify-center gap-2">
+            <button onclick="startGame()" class="w-full bg-orange-500 hover:bg-orange-600 text-white rounded-xl py-3 text-xl font-extrabold shadow-lg shadow-orange-200 active:scale-95 transition-all flex items-center justify-center gap-2 focus:ring-4 focus:ring-orange-200">
                 Começar Missão <i data-lucide="play" class="w-6 h-6"></i>
             </button>
         </div>
@@ -91,22 +102,25 @@
     <div id="victory-screen" class="absolute inset-0 z-50 hidden flex-col items-center justify-center p-4 bg-[#FDFBF7]/95 backdrop-blur-sm">
         <div class="bg-green-50 p-6 sm:p-10 rounded-[2rem] shadow-2xl shadow-green-200 border-4 border-green-400 max-w-lg w-full text-center flex flex-col items-center relative overflow-hidden">
             
-            <div class="absolute top-0 left-0 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10 pointer-events-none"></div>
-
-            <div class="text-6xl mb-4 animate-bounce">🏆</div>
+            <div class="text-6xl mb-4 animate-bounce" aria-hidden="true">🏆</div>
             
             <h1 class="text-4xl font-extrabold text-green-700 mb-2">Parabéns, <span id="victory-name">Jogador</span>!</h1>
             <p class="text-lg text-green-600 font-bold mb-6">Você atingiu a meta de <span id="victory-target">5</span> acertos e seu foguete chegou ao espaço!</p>
             
             <div class="bg-white p-6 rounded-2xl shadow-md border-2 border-green-100 w-full mb-8 transform hover:scale-105 transition-transform cursor-default">
-                <div class="text-4xl mb-2">🎁</div>
+                <div class="text-4xl mb-2" aria-hidden="true">🎁</div>
                 <p class="text-green-800 font-extrabold text-xl leading-tight">Você ganhou o direito a um prêmio especial!</p>
                 <p class="text-gray-500 font-bold mt-2 text-sm">Chame um adulto para receber sua recompensa.</p>
             </div>
 
-            <button onclick="resetGame()" class="w-full bg-green-500 hover:bg-green-600 text-white rounded-xl py-3 text-xl font-extrabold shadow-lg shadow-green-200 active:scale-95 transition-all flex items-center justify-center gap-2">
-                Jogar Novamente <i data-lucide="rotate-ccw" class="w-6 h-6"></i>
-            </button>
+            <div class="w-full flex flex-col sm:flex-row gap-3">
+                <a href="index.html" class="w-full sm:w-1/2 bg-white hover:bg-gray-50 text-gray-700 border-2 border-gray-200 rounded-xl py-3 text-lg font-extrabold shadow-sm active:scale-95 transition-all flex items-center justify-center gap-2">
+                    <i data-lucide="home" class="w-5 h-5"></i> Menu Inicial
+                </a>
+                <button onclick="resetGame()" class="w-full sm:w-1/2 bg-green-500 hover:bg-green-600 text-white rounded-xl py-3 text-lg font-extrabold shadow-lg shadow-green-200 active:scale-95 transition-all flex items-center justify-center gap-2">
+                    Jogar Novamente <i data-lucide="rotate-ccw" class="w-5 h-5"></i>
+                </button>
+            </div>
         </div>
     </div>
 
@@ -114,15 +128,20 @@
     <div id="game-container" class="hidden h-full w-full flex flex-col">
         <!-- HEADER -->
         <header class="w-full max-w-6xl mx-auto px-4 pt-2 pb-1 flex justify-between items-center shrink-0">
-            <div class="w-10"></div> <!-- Espaçador -->
+            <!-- Botão Voltar ao Menu -->
+            <a href="index.html" class="w-10 h-10 flex items-center justify-center bg-white border-2 border-gray-200 rounded-xl text-gray-500 hover:text-orange-500 hover:border-orange-300 shadow-sm transition-colors" title="Voltar ao Menu Inicial" aria-label="Voltar ao Menu Inicial">
+                <i data-lucide="home" class="w-5 h-5"></i>
+            </a>
+
             <div class="flex flex-col items-center text-center">
                 <div class="bg-gray-100 text-gray-500 uppercase tracking-widest text-[9px] sm:text-[10px] font-bold px-3 py-1 rounded-full mb-1 shadow-sm border border-gray-200">
-                    Alfabetização Divertida
+                    Montar Palavras
                 </div>
                 <h1 class="text-2xl sm:text-3xl font-extrabold text-gray-800 tracking-tight mb-0">Silabando</h1>
             </div>
+
             <!-- Botão Tela Cheia -->
-            <button onclick="toggleFullscreen()" class="w-10 h-10 flex items-center justify-center bg-white border-2 border-gray-200 rounded-xl text-gray-500 hover:text-orange-500 hover:border-orange-300 shadow-sm transition-colors" title="Tela Cheia (F11)">
+            <button onclick="toggleFullscreen()" class="w-10 h-10 flex items-center justify-center bg-white border-2 border-gray-200 rounded-xl text-gray-500 hover:text-orange-500 hover:border-orange-300 shadow-sm transition-colors" title="Tela Cheia (F11)" aria-label="Alternar Tela Cheia">
                 <i data-lucide="maximize" class="w-5 h-5"></i>
             </button>
         </header>
@@ -132,21 +151,19 @@
             <div class="flex gap-2">
                 <div class="relative flex-grow">
                     <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4"></i>
-                    <input type="text" id="word-input" placeholder="Digite uma palavra..." class="w-full pl-9 pr-3 py-2 rounded-xl border-2 border-gray-200 shadow-sm focus:border-orange-400 focus:ring-4 focus:ring-orange-100 outline-none transition-all text-sm sm:text-base font-medium">
+                    <input type="text" id="word-input" placeholder="Digite uma palavra..." aria-label="Inserir palavra manual" class="w-full pl-9 pr-3 py-2 rounded-xl border-2 border-gray-200 shadow-sm focus:border-orange-400 focus:ring-4 focus:ring-orange-100 outline-none transition-all text-sm sm:text-base font-medium">
                 </div>
                 <button onclick="handleManualWord()" class="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-xl font-bold shadow-md shadow-orange-200 transition-all active:scale-95 flex items-center justify-center gap-1.5 whitespace-nowrap">
                     <i data-lucide="sparkles" class="w-4 h-4"></i> <span class="hidden sm:inline">Montar</span>
                 </button>
-                <button onclick="loadRandomWord()" class="bg-white hover:bg-gray-50 text-gray-700 px-3 py-2 rounded-xl font-bold shadow-sm border-2 border-gray-200 transition-all active:scale-95 flex items-center justify-center" title="Palavra Aleatória">
+                <button onclick="loadRandomWord()" class="bg-white hover:bg-gray-50 text-gray-700 px-3 py-2 rounded-xl font-bold shadow-sm border-2 border-gray-200 transition-all active:scale-95 flex items-center justify-center" title="Palavra Aleatória" aria-label="Palavra Aleatória">
                     <i data-lucide="shuffle" class="w-4 h-4 text-indigo-500"></i>
                 </button>
             </div>
         </section>
 
         <!-- IDEIAS -->
-        <section id="ideas-container" class="w-full max-w-3xl mx-auto px-2 sm:px-4 mb-2 flex flex-wrap justify-center items-center gap-1.5 shrink-0 hidden sm:flex">
-            <!-- Renderizado via JS -->
-        </section>
+        <section id="ideas-container" class="w-full max-w-3xl mx-auto px-2 sm:px-4 mb-2 flex flex-wrap justify-center items-center gap-1.5 shrink-0 hidden sm:flex" aria-label="Sugestões de palavras"></section>
 
         <!-- ÁREA PRINCIPAL (Esquerda: Jogo / Direita: Progresso Foguete Desktop) -->
         <main class="flex-grow w-full max-w-5xl mx-auto px-2 sm:px-4 pb-2 flex flex-col md:flex-row gap-4 items-center justify-center min-h-0 relative">
@@ -155,22 +172,18 @@
             <div id="game-card" class="w-full max-w-3xl bg-white rounded-[1.5rem] shadow-xl shadow-gray-200/60 border border-gray-100 p-3 sm:p-5 flex flex-col items-center justify-between h-full transition-transform">
                 
                 <!-- Corações -->
-                <div id="hearts-container" class="w-full flex justify-center gap-1.5 shrink-0">
-                    <!-- Renderizado via JS -->
-                </div>
+                <div id="hearts-container" class="w-full flex justify-center gap-1.5 shrink-0" aria-label="Tentativas restantes"></div>
 
                 <!-- Ilustração e Som -->
                 <div class="relative w-full flex-grow flex justify-center items-center min-h-[5rem]">
-                    <div id="emoji-display" class="text-6xl sm:text-7xl filter drop-shadow-md select-none animate-bounce-slow">🧩</div>
-                    <button onclick="speakCurrentWord()" class="absolute top-0 right-0 bg-indigo-50 text-indigo-500 hover:bg-indigo-100 p-2 sm:p-3 rounded-full transition-colors active:scale-90 shadow-sm" title="Ouvir Palavra">
+                    <div id="emoji-display" class="text-6xl sm:text-7xl filter drop-shadow-md select-none animate-bounce-slow" aria-hidden="true">🧩</div>
+                    <button onclick="speakCurrentWord()" class="absolute top-0 right-0 bg-indigo-50 text-indigo-500 hover:bg-indigo-100 p-2 sm:p-3 rounded-full transition-colors active:scale-90 shadow-sm" title="Ouvir Palavra" aria-label="Ouvir palavra">
                         <i data-lucide="volume-2" class="w-5 h-5 sm:w-6 sm:h-6"></i>
                     </button>
                 </div>
 
                 <!-- Slots (Linha de Montagem) -->
-                <div id="slots-container" class="w-full flex flex-wrap justify-center gap-2 sm:gap-3 shrink-0 my-2">
-                    <!-- Renderizado via JS -->
-                </div>
+                <div id="slots-container" class="w-full flex flex-wrap justify-center gap-2 sm:gap-3 shrink-0 my-2" aria-label="Espaços para sílabas"></div>
 
                 <!-- Botão Conferir -->
                 <div class="w-full flex justify-center mb-2 shrink-0">
@@ -180,9 +193,7 @@
                 </div>
 
                 <!-- Banco de Sílabas -->
-                <div id="bank-container" class="w-full bg-orange-50/50 border-2 border-orange-100 rounded-2xl p-2 sm:p-4 flex flex-wrap justify-center gap-2 shrink-0">
-                    <!-- Renderizado via JS -->
-                </div>
+                <div id="bank-container" class="w-full bg-orange-50/50 border-2 border-orange-100 rounded-2xl p-2 sm:p-4 flex flex-wrap justify-center gap-2 shrink-0" aria-label="Banco de sílabas"></div>
             </div>
 
             <!-- FOGUETE PROGRESSO (Desktop - Vertical) -->
@@ -190,25 +201,16 @@
                 <div class="absolute top-0 text-sm font-bold text-gray-500 uppercase tracking-widest bg-white px-2 py-1 rounded-full shadow-sm border border-gray-100 z-10 whitespace-nowrap">
                     Meta: <span id="rocket-target-desktop" class="text-orange-500">5</span>
                 </div>
-                <!-- Trilha -->
                 <div class="absolute h-full w-8 bg-orange-100/50 rounded-full border-2 border-dashed border-orange-200 top-4"></div>
-                <!-- Foguete SVG -->
                 <div id="rocket-desktop" class="z-20 transition-all duration-1000 ease-out" style="transform: translateY(0px);">
-                    <!-- Rocket SVG -->
-                    <svg width="80" height="120" viewBox="0 0 100 150" xmlns="http://www.w3.org/2000/svg" class="drop-shadow-xl">
-                        <!-- Fogo -->
+                    <svg width="80" height="120" viewBox="0 0 100 150" xmlns="http://www.w3.org/2000/svg" class="drop-shadow-xl" aria-hidden="true">
                         <path d="M 40 110 Q 50 150 60 110 Q 55 120 50 140 Q 45 120 40 110" fill="#fb923c" class="animate-pulse" />
                         <path d="M 45 110 Q 50 135 55 110 Q 52 115 50 130 Q 48 115 45 110" fill="#fef08a" class="animate-pulse" />
-                        <!-- Asas (Azul) -->
                         <path d="M 30 70 C 15 80 15 100 20 115 C 30 100 30 80 30 70" fill="#38bdf8" />
                         <path d="M 70 70 C 85 80 85 100 80 115 C 70 100 70 80 70 70" fill="#38bdf8" />
-                        <!-- Asa Central -->
                         <path d="M 45 85 L 55 85 L 55 120 L 50 130 L 45 120 Z" fill="#0284c7" />
-                        <!-- Corpo (Creme) -->
                         <path d="M 25 70 C 25 20 50 0 50 0 C 50 0 75 20 75 70 C 75 100 65 110 50 110 C 35 110 25 100 25 70 Z" fill="#fffbeb" stroke="#d6d3d1" stroke-width="2"/>
-                        <!-- Bico (Laranja) -->
                         <path d="M 33 30 C 40 15 50 0 50 0 C 50 0 60 15 67 30 Q 50 35 33 30 Z" fill="#f97316" />
-                        <!-- Janela -->
                         <circle cx="50" cy="50" r="12" fill="#bae6fd" stroke="#94a3b8" stroke-width="3" />
                         <circle cx="50" cy="50" r="8" fill="#e0f2fe" />
                     </svg>
@@ -222,12 +224,9 @@
                 <span id="player-name-display" class="text-indigo-500">Nome</span><br>
                 Progresso (<span id="rocket-target-mobile">5</span>)
             </div>
-            <!-- Trilha -->
             <div class="w-full h-4 bg-orange-100/50 rounded-full border-2 border-dashed border-orange-200 absolute left-0 top-1/2 -translate-y-1/2 ml-16 mr-4"></div>
-            <!-- Foguete SVG -->
             <div id="rocket-mobile" class="z-20 transition-all duration-1000 ease-out absolute left-16 top-1/2 -translate-y-1/2 rotate-90 scale-50" style="transform: translateY(-50%) rotate(90deg) translateX(0px);">
-                <!-- Rocket SVG -->
-                <svg width="80" height="120" viewBox="0 0 100 150" xmlns="http://www.w3.org/2000/svg" class="drop-shadow-xl">
+                <svg width="80" height="120" viewBox="0 0 100 150" xmlns="http://www.w3.org/2000/svg" class="drop-shadow-xl" aria-hidden="true">
                     <path d="M 40 110 Q 50 150 60 110 Q 55 120 50 140 Q 45 120 40 110" fill="#fb923c" class="animate-pulse" />
                     <path d="M 45 110 Q 50 135 55 110 Q 52 115 50 130 Q 48 115 45 110" fill="#fef08a" class="animate-pulse" />
                     <path d="M 30 70 C 15 80 15 100 20 115 C 30 100 30 80 30 70" fill="#38bdf8" />
@@ -242,12 +241,15 @@
         </div>
     </div>
 
-    <!-- SCRIPT PRINCIPAL (Vanilla JS) -->
+    <!-- SCRIPT PRINCIPAL -->
     <script>
-        // Inicializa os ícones do Lucide
         lucide.createIcons();
 
-        // --- DICIONÁRIO GIGANTE ---
+        const STORAGE_KEY = 'silabando_state';
+        const AUDIO_LIMIT = 3;
+        let countdownInterval;
+
+        // --- DICIONÁRIO ---
         const DICTIONARY = {
             'banana': { syllables: ['ba', 'na', 'na'], emoji: '🍌' },
             'bola': { syllables: ['bo', 'la'], emoji: '⚽' },
@@ -308,19 +310,58 @@
             playerName: '',
             targetScore: 5,
             currentScore: 0,
-            
             currentWord: '',
             emoji: '🧩',
             targetSyllables: [],
             bankSyllables: [],
             slots: [],
-            
             attemptsLeft: 3,
             isCooldown: false,
             showCorrect: false,
             isSuccess: false,
             shakeError: false
         };
+
+        // --- PERSISTÊNCIA UNIFICADA COM INDEX.HTML ---
+        function loadPlayerProfile() {
+            try {
+                const saved = localStorage.getItem(STORAGE_KEY);
+                if (saved) {
+                    const data = JSON.parse(saved);
+                    if (data.name) {
+                        document.getElementById('player-name-input').value = data.name;
+                    }
+                    if (data.silabasTarget) {
+                        document.getElementById('target-score-input').value = data.silabasTarget;
+                    }
+                    if (typeof data.silabasScore === 'number') {
+                        state.currentScore = data.silabasScore;
+                    }
+                }
+            } catch (e) {
+                console.error("Erro ao ler perfil do localStorage.", e);
+            }
+        }
+
+        function savePlayerProfile() {
+            try {
+                const saved = localStorage.getItem(STORAGE_KEY);
+                const data = saved ? JSON.parse(saved) : {};
+                data.name = state.playerName;
+                data.silabasScore = state.currentScore;
+                data.silabasTarget = state.targetScore;
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+            } catch (e) {
+                console.error("Erro ao salvar perfil no localStorage.", e);
+            }
+        }
+
+        window.onload = loadPlayerProfile;
+
+        function announceAria(text) {
+            const announcer = document.getElementById('aria-announcer');
+            if (announcer) announcer.innerText = text;
+        }
 
         // --- SISTEMA AUDIOVISUAL ---
         const playTone = (freq, type, duration, vol = 0.1) => {
@@ -344,13 +385,13 @@
         };
 
         const playSuccessSound = () => {
-            playTone(523.25, 'sine', 0.5); // C5
-            setTimeout(() => playTone(659.25, 'sine', 0.5), 100); // E5
-            setTimeout(() => playTone(783.99, 'sine', 0.6), 200); // G5
+            playTone(523.25, 'sine', 0.5);
+            setTimeout(() => playTone(659.25, 'sine', 0.5), 100);
+            setTimeout(() => playTone(783.99, 'sine', 0.6), 200);
         };
 
         const playErrorSound = () => {
-            playTone(150, 'sawtooth', 0.3, 0.15); // Low warning buzz
+            playTone(150, 'sawtooth', 0.3, 0.15);
         };
 
         const speakText = (text, rate = 0.8) => {
@@ -385,19 +426,20 @@
             }
             state.playerName = nameInput;
             state.targetScore = parseInt(document.getElementById('target-score-input').value);
-            state.currentScore = 0;
+            if (state.currentScore >= state.targetScore) {
+                state.currentScore = 0;
+            }
+            savePlayerProfile();
             
-            // Atualiza UI
             document.getElementById('welcome-screen').classList.add('hidden');
             document.getElementById('game-container').classList.remove('hidden');
             document.getElementById('player-name-display').innerText = state.playerName;
             document.getElementById('rocket-target-desktop').innerText = state.targetScore;
             document.getElementById('rocket-target-mobile').innerText = state.targetScore;
             
-            // Feedback em áudio (Desbloqueia motor do navegador)
             speakText(`Oi ${state.playerName}! Vamos começar.`, 0.9);
+            announceAria("Atividade iniciada.");
             
-            // Inicia
             updateRocketVisual();
             loadRandomWord();
             renderIdeas();
@@ -405,9 +447,9 @@
 
         function resetGame() {
             state.currentScore = 0;
+            savePlayerProfile();
             document.getElementById('victory-screen').classList.add('hidden');
             
-            // Reseta foguete
             document.getElementById('rocket-desktop').classList.remove('animate-launch');
             document.getElementById('rocket-mobile').classList.remove('animate-launch');
             updateRocketVisual();
@@ -433,6 +475,7 @@
         }
 
         function loadRandomWord() {
+            clearInterval(countdownInterval);
             const words = Object.keys(DICTIONARY);
             let nextWord = words[Math.floor(Math.random() * words.length)];
             if (nextWord === state.currentWord && words.length > 1) {
@@ -443,6 +486,7 @@
 
         function loadWord(word) {
             if (!word) return;
+            clearInterval(countdownInterval);
             const cleanWord = word.trim().toLowerCase();
             state.currentWord = cleanWord;
             
@@ -481,6 +525,7 @@
             state.shakeError = false;
             state.attemptsLeft = 3;
             
+            announceAria(`Nova palavra com ${syllables.length} sílabas.`);
             render();
         }
 
@@ -488,17 +533,16 @@
             if (!state.isCooldown && !state.isSuccess && !state.showCorrect) {
                 if (piece.playCount === undefined) piece.playCount = 0;
                 
-                if (piece.playCount < 3) {
+                if (piece.playCount < AUDIO_LIMIT) {
                     piece.playCount++;
                     speakText(adjustSyllablePhonetics(piece.text), 0.8);
                     
-                    // Atualização visual das bolinhas (pontos de energia)
                     if (domElement) {
                         const container = domElement.closest('.slot, .bank-piece');
                         if (container) {
                             const dots = container.querySelectorAll('.audio-dot');
                             dots.forEach((dot, idx) => {
-                                if (idx >= (3 - piece.playCount)) {
+                                if (idx >= (AUDIO_LIMIT - piece.playCount)) {
                                     dot.classList.remove('bg-orange-400', 'bg-white/80');
                                     dot.classList.add('bg-gray-200', 'bg-black/10');
                                 }
@@ -509,7 +553,6 @@
             }
         }
 
-        // Movimentação
         let draggedPiece = null;
         let dragSource = null;
 
@@ -539,16 +582,14 @@
             render();
         }
 
-        // Validação
         function checkWord() {
             if (state.isCooldown || state.isSuccess || state.showCorrect) return;
             const formedWord = state.slots.map(s => s ? s.text : '').join('');
             if (!formedWord) return;
 
             state.isCooldown = true;
-            render(); // Atualiza botões
+            render();
             
-            // Leitura da palavra formada
             const utterance = speakText(formedWord, 0.7);
             
             const validate = () => {
@@ -574,10 +615,11 @@
             confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 }, colors: ['#f97316', '#3b82f6', '#10b981', '#f59e0b'] });
             
             state.currentScore++;
+            savePlayerProfile();
             updateRocketVisual();
+            announceAria("Parabéns! Palavra correta.");
 
             if (state.currentScore >= state.targetScore) {
-                // Lança foguete e mostra prêmio
                 document.getElementById('rocket-desktop').classList.add('animate-launch');
                 document.getElementById('rocket-mobile').classList.add('animate-launch');
                 
@@ -599,14 +641,14 @@
             playErrorSound();
             state.shakeError = true;
             state.attemptsLeft--;
+            announceAria("Resposta incorreta. Tente novamente.");
             render();
 
             if (state.attemptsLeft <= 0) {
                 setTimeout(() => {
                     state.shakeError = false;
                     state.showCorrect = true;
-                    // Andaimagem: Mostra o certo
-                    state.slots = state.targetSyllables.map((text, i) => ({ id: `correct-${i}`, text, playCount: 3 }));
+                    state.slots = state.targetSyllables.map((text, i) => ({ id: `correct-${i}`, text, playCount: AUDIO_LIMIT }));
                     state.bankSyllables = [];
                     speakCurrentWord();
                     render();
@@ -615,7 +657,6 @@
             } else {
                 setTimeout(() => {
                     state.shakeError = false;
-                    // Devolve pro banco
                     const pieces = state.slots.filter(s => s !== null);
                     state.bankSyllables = [...state.bankSyllables, ...pieces];
                     state.slots.fill(null);
@@ -628,12 +669,12 @@
         function startCountdown(seconds) {
             let left = seconds;
             renderBankMessage(`Próxima em ${left}s...`, state.isSuccess);
-            const interval = setInterval(() => {
+            countdownInterval = setInterval(() => {
                 left--;
                 if (left > 0) {
                     renderBankMessage(`Próxima em ${left}s...`, state.isSuccess);
                 } else {
-                    clearInterval(interval);
+                    clearInterval(countdownInterval);
                     loadRandomWord();
                 }
             }, 1000);
@@ -655,14 +696,11 @@
 
         function updateRocketVisual() {
             const pct = Math.min((state.currentScore / state.targetScore) * 100, 100);
-            
-            // Desktop (Vertical - Y)
-            const maxTranslateY = -400; // Aproximadamente a altura da tela
+            const maxTranslateY = -400;
             const translateY = (pct / 100) * maxTranslateY;
             document.getElementById('rocket-desktop').style.transform = `translateY(${translateY}px)`;
             
-            // Mobile (Horizontal - X, mantendo rotação)
-            const maxTranslateX = window.innerWidth * 0.6; // Porcentagem da largura
+            const maxTranslateX = window.innerWidth * 0.6;
             const translateX = (pct / 100) * maxTranslateX;
             document.getElementById('rocket-mobile').style.transform = `translateY(-50%) rotate(90deg) translateX(${translateX}px)`;
         }
@@ -671,7 +709,7 @@
             const color = isWin ? 'text-green-600' : 'text-blue-600';
             const icon = isWin ? 'check' : 'lightbulb';
             document.getElementById('bank-container').innerHTML = `
-                <div class="w-full flex flex-col items-center justify-center animate-pulse py-1 ${color}">
+                <div class="w-full flex flex-col items-center justify-center animate-pulse py-1 ${color}" role="status">
                     <div class="flex items-center gap-2">
                         <i data-lucide="${icon}" class="w-6 h-6"></i>
                         <p class="font-bold text-sm sm:text-base">${isWin ? 'Parabéns!' : 'Veja como se escreve!'} ${msg}</p>
@@ -682,39 +720,35 @@
         }
 
         function render() {
-            // Corações
             document.getElementById('hearts-container').innerHTML = [1, 2, 3].map(heart => `
-                <i data-lucide="heart" class="w-5 h-5 transition-colors drop-shadow-sm ${heart <= state.attemptsLeft ? 'text-red-500 fill-red-500' : 'text-gray-200 fill-gray-200'}"></i>
+                <i data-lucide="heart" aria-hidden="true" class="w-5 h-5 transition-colors drop-shadow-sm ${heart <= state.attemptsLeft ? 'text-red-500 fill-red-500' : 'text-gray-200 fill-gray-200'}"></i>
             `).join('');
 
-            // Card principal
             const card = document.getElementById('game-card');
             if (state.shakeError) card.classList.add('animate-shake');
             else card.classList.remove('animate-shake');
 
             document.getElementById('emoji-display').innerText = state.emoji;
 
-            // Slots
             const slotsHtml = state.slots.map((piece, index) => {
                 if (piece) {
                     const bgClass = (state.isSuccess || state.showCorrect) ? 'bg-green-500 shadow-green-200 border-transparent' : 'bg-indigo-500 shadow-indigo-200 border-transparent scale-100';
                     const opacityClass = (state.isCooldown && !state.isSuccess && !state.showCorrect) ? 'opacity-80 pointer-events-none' : '';
                     const playCount = piece.playCount || 0;
-                    const dots = Array.from({length: 3}).map((_, i) => `<div class="audio-dot w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full transition-colors ${i < (3 - playCount) ? 'bg-white/80' : 'bg-black/10'}"></div>`).join('');
+                    const dots = Array.from({length: AUDIO_LIMIT}).map((_, i) => `<div class="audio-dot w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full transition-colors ${i < (AUDIO_LIMIT - playCount) ? 'bg-white/80' : 'bg-black/10'}"></div>`).join('');
 
                     return `
-                        <div class="slot relative h-12 sm:h-16 min-w-[3.5rem] sm:min-w-[4.5rem] rounded-xl border-[3px] sm:border-4 flex items-center justify-center transition-all cursor-pointer select-none shadow-lg ${bgClass} ${opacityClass}" data-index="${index}">
+                        <div class="slot relative h-12 sm:h-16 min-w-[3.5rem] sm:min-w-[4.5rem] rounded-xl border-[3px] sm:border-4 flex items-center justify-center transition-all cursor-pointer select-none shadow-lg ${bgClass} ${opacityClass}" data-index="${index}" tabindex="0" role="button" aria-label="Sílaba ${piece.text}">
                             <span class="slot-piece text-2xl sm:text-3xl font-extrabold text-white lowercase" draggable="${(!state.isSuccess && !state.showCorrect && !state.isCooldown) ? 'true' : 'false'}">${piece.text}</span>
-                            <div class="absolute bottom-1 left-1/2 -translate-x-1/2 flex gap-0.5 pointer-events-none">${dots}</div>
+                            <div class="absolute bottom-1 left-1/2 -translate-x-1/2 flex gap-0.5 pointer-events-none" aria-hidden="true">${dots}</div>
                         </div>
                     `;
                 } else {
-                    return `<div class="slot h-12 sm:h-16 min-w-[3.5rem] sm:min-w-[4.5rem] rounded-xl border-[3px] sm:border-4 border-dashed border-gray-200 bg-gray-50/50 scale-95 transition-all" data-index="${index}"></div>`;
+                    return `<div class="slot h-12 sm:h-16 min-w-[3.5rem] sm:min-w-[4.5rem] rounded-xl border-[3px] sm:border-4 border-dashed border-gray-200 bg-gray-50/50 scale-95 transition-all" data-index="${index}" tabindex="0" role="button" aria-label="Espaço vazio"></div>`;
                 }
             }).join('');
             document.getElementById('slots-container').innerHTML = slotsHtml;
 
-            // Botão Conferir
             const btn = document.getElementById('check-btn');
             const isFull = state.slots.every(s => s !== null) && state.slots.length > 0;
             if (isFull && !state.isCooldown && !state.isSuccess && !state.showCorrect) {
@@ -725,7 +759,6 @@
                 btn.className = "px-6 sm:px-8 py-2 sm:py-2.5 rounded-xl font-bold text-base sm:text-lg text-white shadow-md transition-all flex items-center gap-2 bg-gray-300 cursor-not-allowed shadow-none text-gray-100";
             }
 
-            // Banco
             if (!state.isSuccess && !state.showCorrect) {
                 let bankHtml = '';
                 if (state.bankSyllables.length === 0) {
@@ -733,11 +766,11 @@
                 } else {
                     bankHtml = state.bankSyllables.map(piece => {
                         const playCount = piece.playCount || 0;
-                        const dots = Array.from({length: 3}).map((_, i) => `<div class="audio-dot w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full transition-colors ${i < (3 - playCount) ? 'bg-orange-400' : 'bg-gray-200'}"></div>`).join('');
+                        const dots = Array.from({length: AUDIO_LIMIT}).map((_, i) => `<div class="audio-dot w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full transition-colors ${i < (AUDIO_LIMIT - playCount) ? 'bg-orange-400' : 'bg-gray-200'}"></div>`).join('');
                         return `
-                            <div class="bank-piece relative h-10 sm:h-12 px-4 sm:px-5 bg-white border-2 border-orange-200 shadow-sm rounded-xl flex items-center justify-center transition-all select-none ${state.isCooldown ? 'opacity-60 cursor-not-allowed' : 'cursor-grab active:cursor-grabbing hover:border-orange-400 hover:shadow-md hover:-translate-y-1'}" data-id="${piece.id}" draggable="${!state.isCooldown ? 'true' : 'false'}">
+                            <div class="bank-piece relative h-10 sm:h-12 px-4 sm:px-5 bg-white border-2 border-orange-200 shadow-sm rounded-xl flex items-center justify-center transition-all select-none ${state.isCooldown ? 'opacity-60 cursor-not-allowed' : 'cursor-grab active:cursor-grabbing hover:border-orange-400 hover:shadow-md hover:-translate-y-1'}" data-id="${piece.id}" draggable="${!state.isCooldown ? 'true' : 'false'}" tabindex="0" role="button" aria-label="Sílaba disponível ${piece.text}">
                                 <span class="text-xl sm:text-2xl font-bold text-orange-600 lowercase pointer-events-none">${piece.text}</span>
-                                <div class="absolute bottom-1 left-1/2 -translate-x-1/2 flex gap-0.5 pointer-events-none">${dots}</div>
+                                <div class="absolute bottom-1 left-1/2 -translate-x-1/2 flex gap-0.5 pointer-events-none" aria-hidden="true">${dots}</div>
                             </div>
                         `;
                     }).join('');
@@ -749,21 +782,30 @@
             attachDragEvents();
         }
 
+        function handleKeydown(e, callback) {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                callback();
+            }
+        }
+
         // --- ARRASTAR E SOLTAR ---
         function attachDragEvents() {
             document.querySelectorAll('.slot').forEach(slot => {
-                slot.addEventListener('click', (e) => {
+                const action = () => {
                     const index = parseInt(slot.dataset.index);
                     if (state.slots[index]) moveSlotToBank(index);
-                });
+                };
+                slot.addEventListener('click', action);
+                slot.addEventListener('keydown', (e) => handleKeydown(e, action));
+                
                 slot.addEventListener('dragover', e => e.preventDefault());
                 slot.addEventListener('drop', (e) => {
                     e.preventDefault();
                     const index = parseInt(slot.dataset.index);
                     if (state.slots[index] !== null || state.isSuccess || state.isCooldown) return;
                     if (dragSource === 'bank') moveBankToSlot(draggedPiece, index);
-                    else if (dragSource.type === 'slot') {
-                        // Swap
+                    else if (dragSource && dragSource.type === 'slot') {
                         state.slots[index] = state.slots[dragSource.index];
                         state.slots[dragSource.index] = null;
                         render();
@@ -790,11 +832,14 @@
             });
 
             document.querySelectorAll('.bank-piece').forEach(pieceEl => {
-                pieceEl.addEventListener('click', () => {
+                const action = () => {
                     const id = pieceEl.dataset.id;
                     const piece = state.bankSyllables.find(p => p.id === id);
                     if (piece) moveBankToSlot(piece);
-                });
+                };
+                pieceEl.addEventListener('click', action);
+                pieceEl.addEventListener('keydown', (e) => handleKeydown(e, action));
+                
                 pieceEl.addEventListener('dragstart', (e) => {
                     if (state.isCooldown) { e.preventDefault(); return; }
                     const id = pieceEl.dataset.id;
@@ -819,12 +864,10 @@
                         const promise = requestFullScreen.call(docEl);
                         if (promise && typeof promise.catch === 'function') {
                             promise.catch(err => {
-                                alert("O Google Sites bloqueia a Tela Cheia nativa aqui por segurança.\n\nDica: Para ter tela cheia no computador, pressione F11 no teclado!");
+                                alert("Pressione F11 no teclado para alternar a tela cheia.");
                             });
                         }
-                    } catch (e) {
-                        alert("Não foi possível ativar a tela cheia. O Google Sites pode estar bloqueando a ação.");
-                    }
+                    } catch (e) {}
                 }
             } else {
                 if (cancelFullScreen) cancelFullScreen.call(doc);
